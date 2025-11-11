@@ -1,0 +1,23 @@
+[project]
+name = "inspector"
+version = "0.1.0"
+description = "AST-based code inspector for trading models"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "pydantic>=2",
+  "tree-sitter",
+  "tree-sitter-python",
+]
+
+[tool.uv]
+index-url = "https://pypi.org/simple"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+

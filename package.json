@@ -1,0 +1,17 @@
+{
+  "name": "model-card-discrepancy-explorer",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm -C apps/api dev & pnpm -C apps/web dev",
+    "build": "pnpm -C apps/api build && pnpm -C apps/web build",
+    "lint": "pnpm -C apps/api lint && pnpm -C apps/web lint",
+    "format": "pnpm -C apps/api lint --fix || true && pnpm -C apps/web lint --fix || true"
+  }
+}
+

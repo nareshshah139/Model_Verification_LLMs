@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Model {
+  id             String         @id @default(cuid())
+  name           String
+  repoUrl        String?
+  defaultBranch  String?        @default("main")
+  language       String?        @default("python")
+  createdAt      DateTime       @default(now())
+  versions       ModelVersion[]
+  cards          ModelCard[]
+}
+
+model ModelVersion {
+  id                 String      @id @default(cuid())
+  model              Model       @relation(fields: [modelId], references: [id])
+  modelId            String
+  gitCommitSha       String?
+  tag                String?
+  detectedEntrypoints Json?
+  hyperparams        Json?
+  metrics            Json?
+  createdAt          DateTime    @default(now())
+  files              FileBlob[]
+  extractions        Extraction[]
+  discrepancies      Discrepancy[]
+}
+
+enum SourceType {
+  file
+  repo
+}
+
+model ModelCard {
+  id          String     @id @default(cuid())
+  model       Model      @relation(fields: [modelId], references: [id])
+  modelId     String
+  sourceType  SourceType
+  path        String?
+  rawText     String
+  parsed      Json?
+  createdAt   DateTime   @default(now())
+  extractions Extraction[]
+  discrepancies Discrepancy[]
+}
+
+model FileBlob {
+  id               String        @id @default(cuid())
+  modelVersion     ModelVersion  @relation(fields: [modelVersionId], references: [id])
+  modelVersionId   String
+  path             String
+  contentText      String
+  lang             String?
+  isNotebook       Boolean       @default(false)
+  notebookJson     Json?         // For .ipynb files, store the full notebook structure
+  createdAt        DateTime      @default(now())
+}
+
+enum Subject {
+  code
+  card
+}
+
+model Extraction {
+  id              String      @id @default(cuid())
+  subject         Subject
+  modelVersion    ModelVersion? @relation(fields: [modelVersionId], references: [id])
+  modelVersionId  String?
+  modelCard       ModelCard?  @relation(fields: [modelCardId], references: [id])
+  modelCardId     String?
+  facts           Json
+  llmModel        String?
+  createdAt       DateTime    @default(now())
+}
+
+enum Severity {
+  low
+  med
+  high
+}
+
+enum DiscrepancySource {
+  rule
+  llm
+}
+
+model Discrepancy {
+  id              String        @id @default(cuid())
+  modelVersion    ModelVersion? @relation(fields: [modelVersionId], references: [id])
+  modelVersionId  String?
+  modelCard       ModelCard?    @relation(fields: [modelCardId], references: [id])
+  modelCardId     String?
+  category        String
+  severity        Severity
+  description     String
+  evidence        Json?
+  source          DiscrepancySource
+  resolved        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+}
+
+enum JobType {
+  git
+  upload
+}
+
+enum JobStatus {
+  pending
+  running
+  succeeded
+  failed
+}
+
+model IngestionJob {
+  id         String    @id @default(cuid())
+  type       JobType
+  status     JobStatus @default(pending)
+  payload    Json?
+  errorText  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+

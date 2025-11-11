@@ -1,0 +1,35 @@
+{
+  "name": "@mce/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "eslint .",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "ai": "^3.3.14",
+    "@ai-sdk/openai": "^0.0.45",
+    "zod": "^3.23.8",
+    "@prisma/client": "^5.19.1",
+    "jszip": "^3.10.1",
+    "simple-git": "^3.27.0"
+  },
+  "devDependencies": {
+    "typescript": "5.6.2",
+    "eslint": "8.57.0",
+    "@types/node": "20.14.10",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "prisma": "^5.19.1",
+    "vitest": "1.6.0"
+  }
+}
+

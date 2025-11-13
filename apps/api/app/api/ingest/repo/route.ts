@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../src/lib/prisma";
-import { analyzeCodeFiles } from "../../../../src/lib/inspector";
-import { runAnalysisAndPersist } from "../../../../src/lib/analysis";
-import { notebookCodeToPythonScript, extractPythonFromNotebook } from "../../../../src/lib/notebook";
+import { prisma } from "@/src/lib/prisma";
+import { analyzeCodeFiles } from "@/src/lib/inspector";
+import { runAnalysisAndPersist } from "@/src/lib/analysis";
+import { notebookCodeToPythonScript, extractPythonFromNotebook } from "@/src/lib/notebook";
 import simpleGit from "simple-git";
 import os from "os";
 import path from "path";

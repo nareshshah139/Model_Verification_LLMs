@@ -1,0 +1,17 @@
+# Packaging & artifacts rulepack
+
+# Joblib artifact saves
+- id: joblib-dump-model
+  language: python
+  rule:
+    pattern: joblib.dump($OBJ, $PATH)
+
+---
+# Random seed discipline
+- id: seed-set
+  language: python
+  rule:
+    any:
+      - pattern: np.random.seed($N)
+      - pattern: random.seed($N)
+

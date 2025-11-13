@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../src/lib/prisma";
+import { prisma } from "@/src/lib/prisma";
 
 export async function GET(
   req: Request,
@@ -27,7 +27,16 @@ export async function GET(
   const discrepancies = await prisma.discrepancy.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    select: { id: true, category: true, severity: true, description: true, createdAt: true },
+    select: {
+      id: true,
+      category: true,
+      severity: true,
+      description: true,
+      evidence: true,
+      source: true,
+      resolved: true,
+      createdAt: true,
+    },
   });
 
   return NextResponse.json({ discrepancies });

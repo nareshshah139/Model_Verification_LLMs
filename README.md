@@ -7,24 +7,23 @@ An AST-RAG-based system for detecting discrepancies between trading model implem
 - **Code Analysis**: AST-based extraction of facts from Python code and Jupyter notebooks
 - **Model Card Parsing**: Extracts structured information from model card markdown files
 - **Discrepancy Detection**: Compares code implementation against model card claims
-- **Interactive UI**: Web interface for browsing models, viewing code, and reviewing discrepancies
+- **3-Panel Workspace UI**: Cursor-style single-page interface with:
+  - File explorer (left panel)
+  - Tabbed editor with notebook viewer (center panel)
+  - Model card viewer (right panel)
+  - Resizable panels for customized layout
+- **Notebook Viewer**: Professional Jupyter notebook rendering with syntax highlighting and output display
 - **Multiple Ingestion Methods**: Support for Git repository cloning and file uploads
-- **Notebook Support**: Full support for Jupyter notebooks with preserved structure
 
 ## Architecture
 
 This is a monorepo containing:
 
-- **`apps/api`**: Next.js API server (port 3001)
+- **`apps/api`**: Next.js application (port 3001)
+  - 3-panel workspace UI (file explorer, tabbed editor, model card viewer)
   - REST API endpoints for models, versions, files, and discrepancies
   - Prisma ORM for database management
   - Integration with OpenAI for discrepancy analysis
-
-- **`apps/web`**: React frontend (Vite, port 5173)
-  - File tree browser
-  - Code viewer with syntax highlighting
-  - Model card viewer
-  - Discrepancy list and details
 
 - **`services/inspector`**: Python FastAPI service
   - AST-based code analysis
@@ -37,7 +36,7 @@ This is a monorepo containing:
 - Node.js 18+ and pnpm 9.0.0
 - Python 3.10+
 - PostgreSQL database
-- OpenAI API key (for discrepancy analysis)
+- OpenAI API key OR Anthropic API key (for discrepancy analysis)
 
 ## Setup
 
@@ -65,8 +64,14 @@ Create `.env` files in `apps/api`:
 ```bash
 # apps/api/.env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/model_cards"
+# Use OpenAI (default)
 OPENAI_API_KEY="your-openai-api-key"
+# OR use Anthropic
+# LLM_PROVIDER="anthropic"
+# ANTHROPIC_API_KEY="your-anthropic-api-key"
+# LLM_MODEL="claude-3-5-sonnet-20241022"  # Optional, defaults shown below
 INSPECTOR_URL="http://localhost:8000"
+CARDCHECK_API_URL="http://localhost:8001"
 ```
 
 ### 4. Run Database Migrations
@@ -94,7 +99,7 @@ pip install -e .
 uvicorn main:app --reload --port 8000
 ```
 
-### 6. Start Development Servers
+### 6. Start Development Server
 
 From the root directory:
 
@@ -102,41 +107,38 @@ From the root directory:
 pnpm dev
 ```
 
-This starts both:
-- API server on http://localhost:3001
-- Web frontend on http://localhost:5173
-
-The frontend automatically proxies `/api/*` requests to the backend.
+This starts the Next.js application on http://localhost:3001
 
 ## Usage
 
-### Ingesting Models
+### Workspace Interface
+
+- Navigate to http://localhost:3001/workspace
+- Use the **left panel** to browse files
+- Click files to open them in the **center panel** tabs
+- View model card information in the **right panel**
+- Switch between Notebook and Dashboard views using SuperTabs
+
+### Ingesting Models via API
+
+Use the API endpoints to ingest models:
 
 1. **From Git Repository**:
-   - Navigate to `/ingest` in the web UI
-   - Enter the repository URL
-   - Click "Queue Import"
-   - The system will clone the repo, analyze code, and extract model cards
+   ```bash
+   POST /api/ingest/repo
+   Body: { "repoUrl": "https://github.com/..." }
+   ```
 
 2. **From File Upload**:
-   - Navigate to `/ingest` in the web UI
-   - Upload a model card markdown file (required)
-   - Optionally upload a ZIP file containing Python files and/or Jupyter notebooks
-   - Click "Upload"
-
-### Viewing Models
-
-- Navigate to `/models` to see all ingested models
-- Click on a model to view:
-  - File tree structure
-  - Code files and notebooks
-  - Model card content
-  - Discrepancies detected
+   ```bash
+   POST /api/ingest/upload
+   Body: FormData with model card and optional ZIP file
+   ```
 
 ### Analyzing Discrepancies
 
 - The system automatically runs discrepancy analysis when models are ingested
-- View discrepancies on the model detail page or the `/discrepancies` page
+- View discrepancies via API: `GET /api/models/[id]/discrepancies?version=[versionId]`
 - Discrepancies are categorized by severity (low, med, high)
 
 ## API Endpoints
@@ -165,15 +167,11 @@ The frontend automatically proxies `/api/*` requests to the backend.
 ```
 .
 ├── apps/
-│   ├── api/              # Next.js API server
-│   │   ├── app/api/      # API routes
-│   │   ├── src/lib/      # Business logic
-│   │   └── prisma/       # Database schema
-│   └── web/              # React frontend
-│       ├── src/
-│       │   ├── components/
-│       │   └── routes.tsx
-│       └── vite.config.ts
+│   └── api/              # Next.js application
+│       ├── app/          # App router (workspace UI + API routes)
+│       ├── components/   # UI components (workspace, notebook viewer)
+│       ├── src/lib/      # Business logic
+│       └── prisma/       # Database schema
 ├── services/
 │   └── inspector/        # Python AST analyzer
 ├── packages/
@@ -189,10 +187,6 @@ The frontend automatically proxies `/api/*` requests to the backend.
 # API tests
 cd apps/api
 pnpm test
-
-# E2E tests
-cd apps/web
-pnpm e2e
 ```
 
 ### Building for Production
@@ -212,11 +206,11 @@ pnpm prisma:studio      # Open Prisma Studio (if available)
 
 ## Technologies
 
-- **Frontend**: React, TypeScript, Vite, React Router
-- **Backend**: Next.js 14, TypeScript, Prisma
-- **Database**: PostgreSQL
+- **Frontend/Backend**: Next.js 14 (App Router), TypeScript, React
+- **UI Components**: shadcn/ui, Tailwind CSS, Radix UI
+- **Database**: PostgreSQL, Prisma ORM
 - **Code Analysis**: Python, FastAPI, tree-sitter
-- **AI**: OpenAI GPT-4o-mini (via Vercel AI SDK)
+- **AI**: OpenAI GPT-4o-mini or Anthropic Claude (via Vercel AI SDK)
 - **Package Manager**: pnpm (workspaces)
 
 ## License

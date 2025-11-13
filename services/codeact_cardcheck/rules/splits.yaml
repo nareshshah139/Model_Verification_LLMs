@@ -1,0 +1,12 @@
+# Splits and OOT validation rulepack
+
+# Detect time-based filters by vintage/year
+- id: oot-vintage-splits
+  language: python
+  rule:
+    any:
+      - pattern: $DF[$DF.issue_d.between($START, $END)]
+      - pattern: $DF[$DF['issue_d'].between($START, $END)]
+      - pattern: $DF[$DF['year'].between($Y1, $Y2)]
+      - pattern: $DF[$DF['issue_year'].isin($$$YS)]
+

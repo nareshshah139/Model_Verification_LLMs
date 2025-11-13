@@ -1,0 +1,55 @@
+# Algorithms rulepack - Detect model families & mismatches
+
+# PD must be LogisticRegression (scorecard-friendly)
+- id: pd-logistic-used
+  language: python
+  rule:
+    pattern: LogisticRegression($$$ARGS)
+
+---
+# Detect LightGBM/XGBoost/RF in case of mismatch to model card claims
+- id: tree-boosting-detected
+  language: python
+  rule:
+    any:
+      - pattern: LGBMClassifier($$$ARGS)
+      - pattern: XGBClassifier($$$ARGS)
+      - pattern: RandomForestClassifier($$$ARGS)
+
+---
+# LGD claimed "two-stage": incidence logistic on (recovery>0), magnitude linear
+- id: lgd-incidence-logistic
+  language: python
+  rule:
+    any:
+      - pattern: LogisticRegression($$$ARGS)
+      - pattern: sm.Logit($$$ARGS)
+      - pattern: smf.logit($$$ARGS)
+
+---
+- id: lgd-magnitude-linear
+  language: python
+  rule:
+    any:
+      - pattern: LinearRegression($$$ARGS)
+      - pattern: sm.OLS($$$ARGS)
+
+---
+# EAD claimed "linear regression on CCF"
+- id: ead-linear-on-ccf
+  language: python
+  rule:
+    any:
+      - pattern: LinearRegression($$$ARGS)
+      - pattern: sm.OLS($$$ARGS)
+
+---
+# Detect Beta Regression (mismatch vs your card)
+- id: beta-regression-detected
+  language: python
+  rule:
+    any:
+      - pattern: BetaModel($$$ARGS)
+      - pattern: sm.othermod.betareg.BetaModel($$$ARGS)
+      - pattern: smf.betareg($$$ARGS)
+

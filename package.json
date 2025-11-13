@@ -8,10 +8,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "pnpm -C apps/api dev & pnpm -C apps/web dev",
-    "build": "pnpm -C apps/api build && pnpm -C apps/web build",
-    "lint": "pnpm -C apps/api lint && pnpm -C apps/web lint",
-    "format": "pnpm -C apps/api lint --fix || true && pnpm -C apps/web lint --fix || true"
+    "dev": "pnpm -C apps/api dev",
+    "build": "pnpm -C apps/api build",
+    "lint": "pnpm -C apps/api lint",
+    "format": "pnpm -C apps/api lint --fix || true"
   }
 }
 

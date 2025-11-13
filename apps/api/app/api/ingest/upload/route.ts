@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { queueIngestionJob } from "../../../../src/lib/jobs";
+import { queueIngestionJob } from "@/src/lib/jobs";
 import JSZip from "jszip";
-import { prisma } from "../../../../src/lib/prisma";
-import { analyzeCodeFiles } from "../../../../src/lib/inspector";
-import { runAnalysisAndPersist } from "../../../../src/lib/analysis";
-import { notebookCodeToPythonScript } from "../../../../src/lib/notebook";
+import { prisma } from "@/src/lib/prisma";
+import { analyzeCodeFiles } from "@/src/lib/inspector";
+import { runAnalysisAndPersist } from "@/src/lib/analysis";
+import { notebookCodeToPythonScript } from "@/src/lib/notebook";
 
 export const runtime = "nodejs";
 

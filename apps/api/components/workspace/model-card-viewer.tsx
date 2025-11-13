@@ -25,15 +25,29 @@ export function ModelCardViewer({ path, type }: Props) {
   const [verifying, setVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState<"content" | "verification">("content");
   
+  // Streaming state
+  const [progressMessages, setProgressMessages] = useState<Array<{
+    message: string;
+    step?: number;
+    data?: any;
+    timestamp: number;
+  }>>([]);
+  
   // Use workspace context for persistent verification state
   const { 
-    getVerificationReport, 
+    verificationReports,
     setVerificationReport: saveVerificationReport,
     setNotebookDiscrepancies 
   } = useWorkspace();
   
-  // Get verification report from context (persists across mount/unmount)
-  const verificationReport = getVerificationReport(path);
+  // Get verification report from context and track it in local state
+  // This ensures the component re-renders when the Map changes
+  const [verificationReport, setLocalVerificationReport] = useState<any>(undefined);
+  
+  useEffect(() => {
+    const report = verificationReports.get(path);
+    setLocalVerificationReport(report);
+  }, [verificationReports, path]);
 
   useEffect(() => {
     async function loadContent() {
@@ -91,6 +105,8 @@ export function ModelCardViewer({ path, type }: Props) {
   const handleVerifyModelCard = async () => {
     setVerifying(true);
     setError(null);
+    setProgressMessages([]);
+    setActiveTab("verification"); // Switch to verification tab immediately
     
     try {
       // Determine the repo path - adjust this based on your structure
@@ -107,15 +123,62 @@ export function ModelCardViewer({ path, type }: Props) {
         }),
       });
 
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || "Verification failed");
+        throw new Error("Verification request failed");
       }
 
-      // Save to context - persists across unmount
-      saveVerificationReport(path, result.report);
-      setActiveTab("verification");
+      // Read SSE stream
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete SSE messages
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'progress') {
+                // Add progress message
+                setProgressMessages(prev => [...prev, {
+                  message: data.message || 'Processing...',
+                  step: data.data?.step,
+                  data: data.data,
+                  timestamp: Date.now(),
+                }]);
+              } else if (data.type === 'complete') {
+                // Final report received
+                if (data.report) {
+                  saveVerificationReport(path, data.report);
+                  setProgressMessages(prev => [...prev, {
+                    message: '✓ Verification complete!',
+                    timestamp: Date.now(),
+                  }]);
+                }
+              } else if (data.type === 'error') {
+                throw new Error(data.message || 'Verification failed');
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE message:', line, parseError);
+            }
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
       console.error("Verification error:", err);
@@ -127,6 +190,8 @@ export function ModelCardViewer({ path, type }: Props) {
   const handleVerifyNotebooks = async () => {
     setVerifying(true);
     setError(null);
+    setProgressMessages([]);
+    setActiveTab("verification"); // Switch to verification tab immediately
     
     try {
       // Get all notebooks in the repo
@@ -151,25 +216,72 @@ export function ModelCardViewer({ path, type }: Props) {
         }),
       });
 
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || "Verification failed");
+        throw new Error("Verification request failed");
       }
 
-      // Save to context - persists across unmount
-      saveVerificationReport(path, result.report);
-      
-      // Also save notebook-specific discrepancies
-      if (result.discrepancies && Array.isArray(result.discrepancies)) {
-        for (const disc of result.discrepancies) {
-          if (disc.notebookPath && disc.issues) {
-            setNotebookDiscrepancies(disc.notebookPath, disc.issues);
+      // Read SSE stream
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete SSE messages
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'progress') {
+                // Add progress message
+                setProgressMessages(prev => [...prev, {
+                  message: data.message || 'Processing...',
+                  step: data.data?.step,
+                  data: data.data,
+                  timestamp: Date.now(),
+                }]);
+              } else if (data.type === 'complete') {
+                // Final report received
+                if (data.report) {
+                  saveVerificationReport(path, data.report);
+                  
+                  // Also save notebook-specific discrepancies
+                  if (data.discrepancies && Array.isArray(data.discrepancies)) {
+                    for (const disc of data.discrepancies) {
+                      if (disc.notebookPath && disc.issues) {
+                        setNotebookDiscrepancies(disc.notebookPath, disc.issues);
+                      }
+                    }
+                  }
+                  
+                  setProgressMessages(prev => [...prev, {
+                    message: '✓ Verification complete!',
+                    timestamp: Date.now(),
+                  }]);
+                }
+              } else if (data.type === 'error') {
+                throw new Error(data.message || 'Verification failed');
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE message:', line, parseError);
+            }
           }
         }
       }
-      
-      setActiveTab("verification");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
       console.error("Verification error:", err);
@@ -206,10 +318,10 @@ export function ModelCardViewer({ path, type }: Props) {
   }
 
   return (
-    <Card className="h-full">
-      <CardContent className="h-full p-0">
-        <div className="flex h-full flex-col">
-          <div className="border-b px-4 py-2 text-sm text-muted-foreground flex items-center gap-2">
+    <Card className="h-full flex flex-col">
+      <CardContent className="h-full p-0 flex flex-col min-h-0">
+        <div className="flex h-full flex-col min-h-0">
+          <div className="border-b px-4 py-2 text-sm text-muted-foreground flex items-center gap-2 flex-shrink-0">
             Model Card:{" "}
             <Badge variant="secondary">{path}</Badge>
             <Badge variant="outline">{type === "markdown" ? "MD" : "DOCX"}</Badge>
@@ -236,8 +348,8 @@ export function ModelCardViewer({ path, type }: Props) {
             </div>
           </div>
           
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col">
-            <div className="border-b px-4">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
+            <div className="border-b px-4 flex-shrink-0">
               <TabsList>
                 <TabsTrigger value="content">
                   <FileText className="h-4 w-4 mr-1" />
@@ -255,9 +367,9 @@ export function ModelCardViewer({ path, type }: Props) {
               </TabsList>
             </div>
             
-            <TabsContent value="content" className="flex-1 m-0 min-h-0 overflow-hidden">
+            <TabsContent value="content" className="flex-1 m-0 min-h-0 overflow-hidden p-0">
               <ScrollArea className="h-full">
-                <div className="p-6">
+                <div className="p-6 pr-10">
               {type === "markdown" ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   {verificationReport ? (
@@ -376,14 +488,90 @@ export function ModelCardViewer({ path, type }: Props) {
               </ScrollArea>
             </TabsContent>
             
-            <TabsContent value="verification" className="flex-1 m-0 min-h-0 overflow-auto p-4">
-              {verificationReport ? (
-                <VerificationResults report={verificationReport} type="model-card" />
+            <TabsContent value="verification" className="flex-1 m-0 min-h-0 overflow-hidden p-0">
+              <ScrollArea className="h-full">
+                <div className="p-4 pr-8">
+              {(verifying || progressMessages.length > 0 || verificationReport) ? (
+                <div className="space-y-4">
+                  {/* Progress Log - Show if there are any messages */}
+                  {progressMessages.length > 0 && (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            {verifying ? (
+                              <>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                                <span className="font-semibold">Verifying model card...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                                <span className="font-semibold">Verification Log</span>
+                              </>
+                            )}
+                          </div>
+                          {!verifying && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setProgressMessages([])}
+                              className="text-xs"
+                            >
+                              Clear Log
+                            </Button>
+                          )}
+                        </div>
+                        <ScrollArea className="h-[400px]">
+                          <div className="space-y-2">
+                            {progressMessages.map((msg, idx) => (
+                              <div
+                                key={idx}
+                                className="text-sm p-3 rounded border border-border bg-muted/30 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                              >
+                                <div className="flex items-start gap-2">
+                                  {msg.step && (
+                                    <Badge variant="outline" className="shrink-0">
+                                      Step {msg.step}
+                                    </Badge>
+                                  )}
+                                  <div className="flex-1">
+                                    <div className="font-mono text-xs text-muted-foreground">
+                                      {new Date(msg.timestamp).toLocaleTimeString()}
+                                    </div>
+                                    <div className="mt-1">{msg.message}</div>
+                                    {msg.data && Object.keys(msg.data).length > 0 && (
+                                      <details className="mt-2">
+                                        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                                          View details
+                                        </summary>
+                                        <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-x-auto">
+                                          {JSON.stringify(msg.data, null, 2)}
+                                        </pre>
+                                      </details>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {/* Results - Show when report is available */}
+                  {verificationReport && (
+                    <VerificationResults report={verificationReport} type="model-card" />
+                  )}
+                </div>
               ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground">
+                <div className="flex items-center justify-center text-muted-foreground min-h-[400px]">
                   Click a verification button to see results
                 </div>
               )}
+                </div>
+              </ScrollArea>
             </TabsContent>
           </Tabs>
         </div>

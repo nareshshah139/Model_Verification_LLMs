@@ -1,0 +1,47 @@
+# Preprocessing & score scaling rulepack
+
+# Binning / discretization hints for scorecards
+- id: pd-binning-detected
+  language: python
+  rule:
+    any:
+      - pattern: pd.cut($$$ARGS)
+      - pattern: KBinsDiscretizer($$$ARGS)
+      - pattern: np.digitize($$$ARGS)
+
+---
+# One-hot / dummy encoding
+- id: one-hot-encoding-detected
+  language: python
+  rule:
+    any:
+      - pattern: pd.get_dummies($$$ARGS)
+      - pattern: OneHotEncoder($$$ARGS)
+
+---
+# Ordinal encoding
+- id: ordinal-encoding-detected
+  language: python
+  rule:
+    pattern: OrdinalEncoder($$$ARGS)
+
+---
+# Missingness treated as category? crude heuristic: fillna with string tokens or new bin
+- id: missing-as-category
+  language: python
+  rule:
+    any:
+      - pattern: $DF[$COL].fillna("Missing")
+      - pattern: $DF[$COL].fillna('MISSING')
+      - pattern: $DF[$COL].fillna('never_delinquent')
+
+---
+# Score scaling to ~300–850
+- id: score-scaling-to-300-850
+  language: python
+  rule:
+    any:
+      - pattern: np.interp($SCORE, $$$ARGS)
+      - pattern: MinMaxScaler($$$ARGS)
+      - pattern: ($SCORE_MIN + ($$EXPR) * ($SCORE_MAX - $SCORE_MIN))
+

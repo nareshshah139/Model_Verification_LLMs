@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ClaimsSpec",
+  "description": "Normalized model card claims specification",
+  "type": "object",
+  "properties": {
+    "model_id": {
+      "type": "string",
+      "description": "Unique model identifier"
+    },
+    "family": {
+      "type": "object",
+      "properties": {
+        "pd": {
+          "type": "string",
+          "description": "Probability of Default model family"
+        },
+        "lgd": {
+          "type": "string",
+          "description": "Loss Given Default model family"
+        },
+        "ead": {
+          "type": "string",
+          "description": "Exposure At Default model family"
+        }
+      }
+    },
+    "score_scale": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      }
+    },
+    "risk_classes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "splits": {
+      "type": "object",
+      "properties": {
+        "train": {
+          "type": "string"
+        },
+        "test": {
+          "type": "string"
+        },
+        "monitor": {
+          "type": "string"
+        },
+        "strategy": {
+          "type": "string"
+        }
+      }
+    },
+    "features_policy": {
+      "type": "object",
+      "properties": {
+        "timepoint": {
+          "type": "string"
+        },
+        "exclude_columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "pd": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "null"]
+          }
+        },
+        "lgd": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "null"]
+          }
+        },
+        "ead": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "null"]
+          }
+        },
+        "el": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    }
+  }
+}
+

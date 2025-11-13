@@ -1,4 +1,15 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function Page() {
-  return <div>API app</div>;
+  const router = useRouter();
+  
+  useEffect(() => {
+    router.push("/workspace");
+  }, [router]);
+
+  return null;
 }
 

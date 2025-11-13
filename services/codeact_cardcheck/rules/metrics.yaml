@@ -1,0 +1,11 @@
+# Metrics and bounds rulepack
+
+# Ensure probabilities/rates are clipped/bounded to [0,1]
+- id: clip-rates-0-1
+  language: python
+  rule:
+    any:
+      - pattern: np.clip($X, 0, 1)
+      - pattern: $S.clip(lower=0, upper=1)
+      - pattern: $S.clip(0, 1)
+

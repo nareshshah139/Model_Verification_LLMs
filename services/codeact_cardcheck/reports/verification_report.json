@@ -1,0 +1,89 @@
+{
+  "model_id": "CRS-LC-EL-2025-001",
+  "consistency_score": 0.325,
+  "findings": [
+    {
+      "claim": "PD: LogisticRegression scorecard",
+      "status": "not_found",
+      "impact": "medium"
+    },
+    {
+      "claim": "LGD: two-stage (logistic + linear)",
+      "status": "not_found",
+      "impact": "medium"
+    },
+    {
+      "claim": "Data splits: {'test': '2014', 'strategy': 'out_of_time'}",
+      "status": "not_found",
+      "impact": "low"
+    },
+    {
+      "claim": "Exclude post-origination columns: ['out_prncp', 'total_pymnt', 'recoveries', 'last_pymnt_d', 'last_pymnt_amnt', 'out_prncp_inv']",
+      "status": "confirmed",
+      "impact": "high"
+    },
+    {
+      "claim": "Bounds: {'ccf': [0.0, 1.0], 'recovery_rate': [0.0, 1.0]}",
+      "status": "not_found",
+      "impact": "medium",
+      "remediation": "Add clipping/bounds enforcement in code"
+    }
+  ],
+  "evidence": {
+    "algorithms": [],
+    "preprocessing": [],
+    "leakage": [],
+    "splits": [],
+    "metrics": [],
+    "packaging": []
+  },
+  "metrics_diffs": {},
+  "claims_spec": {
+    "model_id": "CRS-LC-EL-2025-001",
+    "family": {
+      "pd": "logistic_scorecard",
+      "lgd": "two_stage_hurdle",
+      "ead": "linear_regression_on_ccf"
+    },
+    "score_scale": {
+      "min": 300,
+      "max": 850
+    },
+    "risk_classes": [
+      "AA",
+      "A",
+      "AB",
+      "BB",
+      "B",
+      "BC",
+      "C",
+      "CD",
+      "DD"
+    ],
+    "splits": {
+      "test": "2014",
+      "strategy": "out_of_time"
+    },
+    "features_policy": {
+      "exclude_columns": [
+        "out_prncp",
+        "total_pymnt",
+        "recoveries",
+        "last_pymnt_d",
+        "last_pymnt_amnt",
+        "out_prncp_inv"
+      ]
+    },
+    "bounds": {
+      "ccf": [
+        0.0,
+        1.0
+      ],
+      "recovery_rate": [
+        0.0,
+        1.0
+      ]
+    },
+    "metrics": {}
+  }
+}

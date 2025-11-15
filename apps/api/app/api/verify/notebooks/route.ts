@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import mammoth from "mammoth";
+import { optimizeDocxText, getOptimizationStats } from "@/src/lib/docx-optimizer";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,7 +29,32 @@ export async function POST(request: NextRequest) {
       const absolutePath = path.isAbsolute(modelCardPath)
         ? modelCardPath
         : path.join(process.cwd(), modelCardPath);
-      modelCardText = await fs.readFile(absolutePath, "utf-8");
+      
+      // Check if it's a DOCX file
+      if (absolutePath.toLowerCase().endsWith('.docx')) {
+        // Extract text from DOCX using mammoth
+        const buffer = await fs.readFile(absolutePath);
+        const result = await mammoth.extractRawText({ buffer });
+        const rawText = result.value;
+        
+        // Optimize the extracted text to reduce token count
+        modelCardText = optimizeDocxText(rawText);
+        
+        // Log optimization stats for debugging
+        const stats = getOptimizationStats(rawText, modelCardText);
+        console.log(`DOCX optimization: ${stats.originalTokens} → ${stats.optimizedTokens} tokens (${stats.reductionPercent} reduction)`);
+        
+        if (result.messages && result.messages.length > 0) {
+          console.warn("DOCX extraction warnings:", result.messages);
+        }
+      } else {
+        // For markdown or text files, read as UTF-8
+        modelCardText = await fs.readFile(absolutePath, "utf-8");
+      }
+      try {
+        const mu = process.memoryUsage();
+        console.log(`[VERIFY-NB] After reading model card: rss=${(mu.rss/(1024*1024)).toFixed(1)}MB heapUsed=${(mu.heapUsed/(1024*1024)).toFixed(1)}MB len=${modelCardText.length}`);
+      } catch {}
     } catch (error) {
       return new Response(
         JSON.stringify({ error: `Failed to read model card: ${error}` }),
@@ -73,6 +100,7 @@ export async function POST(request: NextRequest) {
 
           const decoder = new TextDecoder();
           let buffer = '';
+          let eventCount = 0;
 
           while (true) {
             const { done, value } = await reader.read();
@@ -106,6 +134,13 @@ export async function POST(request: NextRequest) {
                   } else {
                     // Forward as-is
                     controller.enqueue(encoder.encode(line + '\n'));
+                  }
+                  eventCount++;
+                  if (eventCount % 20 === 0) {
+                    try {
+                      const mu = process.memoryUsage();
+                      console.log(`[VERIFY-NB] SSE forwarded #${eventCount}, rss=${(mu.rss/(1024*1024)).toFixed(1)}MB, heapUsed=${(mu.heapUsed/(1024*1024)).toFixed(1)}MB, lineBytes=${Buffer.byteLength(line, 'utf8')}`);
+                    } catch {}
                   }
                 } catch {
                   // Forward unparseable lines as-is

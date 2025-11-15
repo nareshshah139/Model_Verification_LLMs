@@ -22,6 +22,7 @@ export async function GET() {
       availableModels: {
         openai: getAvailableModels("openai"),
         anthropic: getAvailableModels("anthropic"),
+        openrouter: getAvailableModels("openrouter"),
       },
     });
   } catch (error) {
@@ -51,9 +52,9 @@ export async function POST(request: NextRequest) {
     const { provider, model, apiKey } = body as Partial<LLMConfig>;
 
     // Validate provider
-    if (!provider || (provider !== "openai" && provider !== "anthropic")) {
+    if (!provider || (provider !== "openai" && provider !== "anthropic" && provider !== "openrouter")) {
       return NextResponse.json(
-        { error: "Invalid provider. Must be 'openai' or 'anthropic'" },
+        { error: "Invalid provider. Must be 'openai', 'anthropic', or 'openrouter'" },
         { status: 400 }
       );
     }
@@ -90,6 +91,12 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      if (provider === "openrouter" && !apiKey.startsWith("sk-")) {
+        return NextResponse.json(
+          { error: "Invalid OpenRouter API key format. Should start with 'sk-'" },
+          { status: 400 }
+        );
+      }
     }
 
     // Set runtime configuration
@@ -106,8 +113,10 @@ export async function POST(request: NextRequest) {
     if (apiKey) {
       if (provider === "openai") {
         process.env.OPENAI_API_KEY = apiKey;
-      } else {
+      } else if (provider === "anthropic") {
         process.env.ANTHROPIC_API_KEY = apiKey;
+      } else if (provider === "openrouter") {
+        process.env.OPENROUTER_API_KEY = apiKey;
       }
     }
     process.env.LLM_PROVIDER = provider;

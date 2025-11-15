@@ -154,21 +154,28 @@ export function ModelCardViewer({ path, type }: Props) {
               const data = JSON.parse(line.slice(6));
               
               if (data.type === 'progress') {
-                // Add progress message
-                setProgressMessages(prev => [...prev, {
+                // Add progress message (bounded, no large payloads)
+                setProgressMessages(prev => {
+                  const nextItem = {
                   message: data.message || 'Processing...',
                   step: data.data?.step,
-                  data: data.data,
                   timestamp: Date.now(),
-                }]);
+                  };
+                  const next = [...prev, nextItem];
+                  // Keep only last 200 entries to cap memory
+                  return next.length > 200 ? next.slice(next.length - 200) : next;
+                });
               } else if (data.type === 'complete') {
                 // Final report received
                 if (data.report) {
                   saveVerificationReport(path, data.report);
-                  setProgressMessages(prev => [...prev, {
+                  setProgressMessages(prev => {
+                    const next = [...prev, {
                     message: '✓ Verification complete!',
                     timestamp: Date.now(),
-                  }]);
+                    }];
+                    return next.length > 200 ? next.slice(next.length - 200) : next;
+                  });
                 }
               } else if (data.type === 'error') {
                 throw new Error(data.message || 'Verification failed');
@@ -562,7 +569,7 @@ export function ModelCardViewer({ path, type }: Props) {
                   
                   {/* Results - Show when report is available */}
                   {verificationReport && (
-                    <VerificationResults report={verificationReport} type="model-card" />
+                    <VerificationResults report={verificationReport} type="model-card" showSummary={false} />
                   )}
                 </div>
               ) : (

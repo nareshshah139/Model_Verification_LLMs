@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VerificationSummary } from "@/components/dashboard/verification-summary";
 
 /**
  * The dashboard is deliberately outside the main 3-pane layout.
@@ -18,6 +19,9 @@ export default function DashboardPage() {
           <Link href="/workspace">Back to Notebook</Link>
         </Button>
       </div>
+
+      {/* Model Card Verification summary cards */}
+      <VerificationSummary />
 
       <Card>
         <CardHeader>

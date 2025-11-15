@@ -13,7 +13,7 @@ An AST-RAG-based system for detecting discrepancies between trading model implem
   - Model card viewer (right panel)
   - Resizable panels for customized layout
 - **Notebook Viewer**: Professional Jupyter notebook rendering with syntax highlighting and output display
-- **Multiple Ingestion Methods**: Support for Git repository cloning and file uploads
+- **CodeAct Agent**: AI-powered verification using LLM-driven code analysis
 
 ## Architecture
 
@@ -21,22 +21,21 @@ This is a monorepo containing:
 
 - **`apps/api`**: Next.js application (port 3001)
   - 3-panel workspace UI (file explorer, tabbed editor, model card viewer)
-  - REST API endpoints for models, versions, files, and discrepancies
-  - Prisma ORM for database management
-  - Integration with OpenAI for discrepancy analysis
+  - File system API for browsing local repositories
+  - Model card verification interface
 
-- **`services/inspector`**: Python FastAPI service
+- **`services/codeact_cardcheck`**: Python FastAPI backend (port 8001)
+  - CodeAct agent for intelligent verification
   - AST-based code analysis
-  - Extracts facts about models, hyperparameters, metrics, etc.
+  - Claim extraction from model cards
 
 - **`packages/shared`**: Shared TypeScript types
 
 ## Prerequisites
 
 - Node.js 18+ and pnpm 9.0.0
-- Python 3.10+
-- PostgreSQL database
-- OpenAI API key OR Anthropic API key (for discrepancy analysis)
+- Python 3.10+ with uv
+- OpenAI API key OR Anthropic API key (for verification)
 
 ## Setup
 
@@ -46,60 +45,68 @@ This is a monorepo containing:
 pnpm install
 ```
 
-### 2. Set Up Database
+### 2. Configure Environment Variables
 
-Start PostgreSQL using Docker Compose:
-
-```bash
-cd infrastructure
-docker-compose up -d
-```
-
-Or use your own PostgreSQL instance. Update the `DATABASE_URL` in your `.env` file.
-
-### 3. Configure Environment Variables
-
-Create `.env` files in `apps/api`:
-
-```bash
-# apps/api/.env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/model_cards"
-# Use OpenAI (default)
-OPENAI_API_KEY="your-openai-api-key"
-# OR use Anthropic
-# LLM_PROVIDER="anthropic"
-# ANTHROPIC_API_KEY="your-anthropic-api-key"
-# LLM_MODEL="claude-3-5-sonnet-20241022"  # Optional, defaults shown below
-INSPECTOR_URL="http://localhost:8000"
-CARDCHECK_API_URL="http://localhost:8001"
-```
-
-### 4. Run Database Migrations
+**Quick Setup:**
 
 ```bash
 cd apps/api
-pnpm prisma:generate
-pnpm prisma:migrate
+bash create_env.sh  # Creates .env.local with placeholders
 ```
 
-### 5. Start Inspector Service
+Then edit `apps/api/.env.local` and add your API keys:
 
 ```bash
-cd services/inspector
-# Using uv (recommended)
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -e .
-uvicorn main:app --reload --port 8000
+# Choose your LLM provider
+LLM_PROVIDER=anthropic  # or openai, openrouter
+LLM_MODEL=claude-sonnet-4-5
 
-# Or using pip
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-uvicorn main:app --reload --port 8000
+# Add your API key (get from provider's website)
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+# OR
+# OPENAI_API_KEY=sk-your-key-here
+# OR
+# OPENROUTER_API_KEY=sk-or-your-key-here
+
+# CodeAct API Server URL
+CODEACT_API_URL=http://localhost:8001
 ```
 
-### 6. Start Development Server
+📖 **For detailed setup instructions, see [ENV_SETUP_GUIDE.md](./ENV_SETUP_GUIDE.md)**
+
+**Get API Keys:**
+- Anthropic: https://console.anthropic.com/
+- OpenAI: https://platform.openai.com/api-keys
+- OpenRouter: https://openrouter.ai/keys
+
+### 3. Start CodeAct API Server
+
+**Important**: The CodeAct API server must be started with the virtual environment activated:
+
+```bash
+cd services/codeact_cardcheck
+
+# Activate virtual environment
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies if not already installed
+pip install -e .
+
+# Start the API server
+python api_server.py
+```
+
+Or use the convenience script:
+```bash
+cd services/codeact_cardcheck
+./start_api_server.sh
+```
+
+The service runs on `http://localhost:8001` by default.
+
+**Note**: If you see errors about missing packages (like `openai`), make sure the virtual environment is activated before starting the server.
+
+### 4. Start Development Server
 
 From the root directory:
 
@@ -114,80 +121,54 @@ This starts the Next.js application on http://localhost:3001
 ### Workspace Interface
 
 - Navigate to http://localhost:3001/workspace
-- Use the **left panel** to browse files
+- Use the **left panel** to browse files in your local repository
 - Click files to open them in the **center panel** tabs
-- View model card information in the **right panel**
+- View and verify model cards in the **right panel**
 - Switch between Notebook and Dashboard views using SuperTabs
 
-### Ingesting Models via API
+### Verifying Model Cards
 
-Use the API endpoints to ingest models:
-
-1. **From Git Repository**:
-   ```bash
-   POST /api/ingest/repo
-   Body: { "repoUrl": "https://github.com/..." }
-   ```
-
-2. **From File Upload**:
-   ```bash
-   POST /api/ingest/upload
-   Body: FormData with model card and optional ZIP file
-   ```
-
-### Analyzing Discrepancies
-
-- The system automatically runs discrepancy analysis when models are ingested
-- View discrepancies via API: `GET /api/models/[id]/discrepancies?version=[versionId]`
-- Discrepancies are categorized by severity (low, med, high)
+1. Open a model card in the right panel
+2. Click **"Verify Model Card"** button
+3. Watch real-time progress as the CodeAct agent analyzes your code
+4. Review verification results and discrepancies
+5. Results are persisted across sessions
 
 ## API Endpoints
 
-### Models
-- `GET /api/models` - List all models
-- `GET /api/models/[id]` - Get model details
-- `GET /api/models/[id]/versions` - List model versions
-- `GET /api/models/[id]/cards` - Get model cards
-- `GET /api/models/[id]/discrepancies?version=[versionId]` - Get discrepancies
+### File System
+- `GET /api/files?path=[path]` - Browse directory contents
+- `GET /api/notebooks/content?path=[path]` - Get notebook content
+- `GET /api/modelcards/content?path=[path]&type=[markdown|docx]` - Get model card content
 
-### Files
-- `GET /api/models/[id]/versions/[versionId]/files/tree` - Get file tree
-- `GET /api/models/[id]/versions/[versionId]/files/content?path=[path]` - Get file content
-- `GET /api/models/[id]/versions/[versionId]/notebooks` - List notebooks
+### Verification
+- `POST /api/verify/model-card` - Verify model card against repository (streaming)
+- `POST /api/verify/notebooks` - Verify notebooks against model card (streaming)
 
-### Analysis
-- `POST /api/analyze/[modelVersionId]` - Run discrepancy analysis (streaming)
-
-### Ingestion
-- `POST /api/ingest/repo` - Ingest from Git repository
-- `POST /api/ingest/upload` - Upload files
+### Configuration
+- `GET /api/llm/config` - Get current LLM configuration
+- `POST /api/llm/config` - Update LLM configuration
 
 ## Project Structure
 
 ```
 .
 ├── apps/
-│   └── api/              # Next.js application
-│       ├── app/          # App router (workspace UI + API routes)
-│       ├── components/   # UI components (workspace, notebook viewer)
-│       ├── src/lib/      # Business logic
-│       └── prisma/       # Database schema
+│   └── api/                    # Next.js application
+│       ├── app/                # App router (workspace UI + API routes)
+│       ├── components/         # UI components (workspace, notebook viewer)
+│       └── src/lib/            # Business logic (LLM config, file handling)
 ├── services/
-│   └── inspector/        # Python AST analyzer
+│   └── codeact_cardcheck/      # Python FastAPI backend
+│       ├── agent_main.py       # CodeAct agent orchestration
+│       ├── api_server.py       # FastAPI server
+│       └── tools/              # Verification tools (AST, claim extraction)
 ├── packages/
-│   └── shared/           # Shared types
-└── infrastructure/       # Docker Compose configs
+│   └── shared/                 # Shared types
+└── Lending-Club-Credit-Scoring/ # Example project for testing
 ```
 
 ## Development
-
-### Running Tests
-
-```bash
-# API tests
-cd apps/api
-pnpm test
-```
 
 ### Building for Production
 
@@ -195,23 +176,26 @@ pnpm test
 pnpm build
 ```
 
-### Database Management
+### Running Tests
 
 ```bash
+# Frontend tests
 cd apps/api
-pnpm prisma:generate    # Generate Prisma client
-pnpm prisma:migrate     # Run migrations
-pnpm prisma:studio      # Open Prisma Studio (if available)
+pnpm test
+
+# Backend tests
+cd services/codeact_cardcheck
+uv run pytest
 ```
 
 ## Technologies
 
-- **Frontend/Backend**: Next.js 14 (App Router), TypeScript, React
+- **Frontend**: Next.js 14 (App Router), TypeScript, React
 - **UI Components**: shadcn/ui, Tailwind CSS, Radix UI
-- **Database**: PostgreSQL, Prisma ORM
-- **Code Analysis**: Python, FastAPI, tree-sitter
-- **AI**: OpenAI GPT-4o-mini or Anthropic Claude (via Vercel AI SDK)
-- **Package Manager**: pnpm (workspaces)
+- **Backend**: Python FastAPI, uvicorn
+- **Code Analysis**: AST-grep, Python AST
+- **AI/LLM**: Anthropic Claude, OpenAI GPT-4, OpenRouter (configurable)
+- **Package Management**: pnpm (Node.js), uv (Python)
 
 ## License
 

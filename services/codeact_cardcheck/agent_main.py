@@ -15,6 +15,8 @@ from tools import (
     PyExecTool,
     CardParser,
     LLMExtractorTool,
+    LLMClaimExtractor,
+    CodeActVerifier,
 )
 from reporters import JSONReporter, MarkdownReporter
 
@@ -31,6 +33,7 @@ class CardCheckAgent:
         runtime_enabled: bool = False,
         sg_binary: str = "sg",
         llm_provider: str = "openai",
+        llm_model: Optional[str] = None,
     ):
         """
         Initialize CardCheck agent.
@@ -39,12 +42,14 @@ class CardCheckAgent:
             workdir: Working directory for operations
             runtime_enabled: Whether to enable dynamic metric recomputation
             sg_binary: Path to ast-grep binary
-            llm_provider: LLM provider for metric extraction (openai, anthropic)
+            llm_provider: LLM provider for metric extraction (openai, anthropic, openrouter)
+            llm_model: Optional explicit model to use for all LLM calls
         """
         self.workdir = Path(workdir) if workdir else Path(tempfile.mkdtemp())
         self.runtime_enabled = runtime_enabled
         self.sg_binary = sg_binary
         self.llm_provider = llm_provider
+        self.llm_model = llm_model
 
         # Initialize tools
         self.repo_tool = RepoTool(str(self.workdir))
@@ -53,7 +58,13 @@ class CardCheckAgent:
         self.astgrep_tool = AstGrepTool(str(self.workdir), sg_binary=sg_binary)
         self.pyexec_tool = PyExecTool(str(self.workdir))
         self.card_parser = CardParser()
-        self.llm_extractor = LLMExtractorTool(str(self.workdir), llm_provider=llm_provider)
+        self.llm_extractor = LLMExtractorTool(
+            str(self.workdir),
+            llm_provider=llm_provider,
+            model=llm_model
+        )
+        # claim_extractor will be initialized with logger in verify_with_codeact()
+        # CodeActVerifier will be initialized with repo_path during verify()
 
     def verify(
         self,
@@ -86,14 +97,28 @@ class CardCheckAgent:
         output_dir = Path(output_dir) if output_dir else self.workdir / "reports"
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        def _mem_rss_mb() -> float:
+            try:
+                import psutil  # type: ignore
+                import os as _os
+                return psutil.Process(_os.getpid()).memory_info().rss / (1024 * 1024)
+            except Exception:
+                try:
+                    import resource  # type: ignore
+                    ru = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                    return (ru / (1024 * 1024)) if ru > (1 << 32) else (ru / 1024.0)
+                except Exception:
+                    return -1.0
+
         # Step 1: Parse model card → ClaimsSpec
-        emit("Step 1: Parsing model card...")
+        emit("Step 1: Parsing model card...", {"step": 1, "mem_rss_mb": round(_mem_rss_mb(), 1)})
         card_text = Path(model_card_path).read_text(encoding="utf-8")
         claims_spec = self.card_parser.parse(card_text)
-        emit(f"Parsed ClaimsSpec: {json.dumps(claims_spec, indent=2)}", {"step": 1, "claims_spec": claims_spec})
+        # Emit only summary to avoid large payloads in progress stream
+        emit("Parsed ClaimsSpec", {"step": 1, "mem_rss_mb": round(_mem_rss_mb(), 1)})
 
         # Step 2: Clone repo or use existing
-        emit("\nStep 2: Preparing repository...", {"step": 2})
+        emit("\nStep 2: Preparing repository...", {"step": 2, "mem_rss_mb": round(_mem_rss_mb(), 1)})
         if repo_url:
             emit(f"Cloning repository from {repo_url}...")
             repo_path = self.repo_tool.clone(repo_url)
@@ -104,7 +129,7 @@ class CardCheckAgent:
         repo_path_obj = Path(repo_path)
 
         # Step 3: Find notebooks and Python files
-        emit("\nStep 3: Discovering code artifacts...", {"step": 3})
+        emit("\nStep 3: Discovering code artifacts...", {"step": 3, "mem_rss_mb": round(_mem_rss_mb(), 1)})
         notebook_paths = self.repo_tool.glob("**/*.ipynb", root=str(repo_path_obj))
         emit(f"Found {len(notebook_paths)} notebooks", {"step": 3, "notebook_count": len(notebook_paths)})
         
@@ -112,14 +137,14 @@ class CardCheckAgent:
         emit(f"Found {len(python_paths)} Python files", {"step": 3, "python_count": len(python_paths)})
 
         # Format Python files
-        emit("\nStep 4: Formatting code...", {"step": 4})
+        emit("\nStep 4: Formatting code...", {"step": 4, "mem_rss_mb": round(_mem_rss_mb(), 1)})
         self.formatter_tool.format(
             [str(repo_path_obj / py) for py in python_paths]
         )
         emit("Code formatting complete", {"step": 4})
 
         # Step 4: Run ast-grep rulepacks
-        emit("\nStep 5: Running ast-grep scans...", {"step": 5})
+        emit("\nStep 5: Running ast-grep scans...", {"step": 5, "mem_rss_mb": round(_mem_rss_mb(), 1)})
         evidence_table = {}
 
         rulepacks = [
@@ -155,7 +180,7 @@ class CardCheckAgent:
             emit(f"    Found {len(annotated_matches)} matches", {"step": 5, "category": category, "match_count": len(annotated_matches)})
 
         # Step 5: Extract metrics from notebook outputs using LLM (parallel processing)
-        emit("\nStep 6: Extracting metrics from notebook outputs using LLM...", {"step": 6})
+        emit("\nStep 6: Extracting metrics from notebook outputs using LLM...", {"step": 6, "mem_rss_mb": round(_mem_rss_mb(), 1)})
         if notebook_paths:
             emit(f"Processing {len(notebook_paths)} notebooks in parallel...", {"step": 6, "status": "extracting"})
             output_metrics = self.llm_extractor.extract_metrics_from_notebooks(
@@ -181,7 +206,7 @@ class CardCheckAgent:
 
         # Step 7: (Optional) Execute notebooks for fresh validation
         if self.runtime_enabled:
-            emit("\nStep 8: Running notebooks for fresh metric validation...", {"step": 8})
+            emit("\nStep 8: Running notebooks for fresh metric validation...", {"step": 8, "mem_rss_mb": round(_mem_rss_mb(), 1)})
             execution_metrics = self._execute_notebooks_for_metrics(
                 [str(repo_path_obj / nb) for nb in notebook_paths]
             )
@@ -209,12 +234,235 @@ class CardCheckAgent:
         md_reporter = MarkdownReporter(str(output_dir / "verification_report.md"))
         md_reporter.emit(report)
 
-        emit(f"\nReports written to {output_dir}", {"step": 10, "output_dir": str(output_dir)})
+        # Check if using a temporary directory
+        is_temp_dir = str(output_dir).startswith(tempfile.gettempdir())
+        if is_temp_dir:
+            emit(f"\nReports generated successfully", {"step": 10, "output_dir": str(output_dir)})
+        else:
+            emit(f"\nReports written to {output_dir}", {"step": 10, "output_dir": str(output_dir)})
         emit("  - verification_report.json")
         emit("  - verification_report.md")
 
         emit("\nVerification complete!", {"step": 11, "report": report})
         return report
+
+    def verify_with_codeact(
+        self,
+        model_card_path: str,
+        repo_url: Optional[str] = None,
+        repo_path: Optional[str] = None,
+        output_dir: Optional[str] = None,
+        progress_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+    ) -> Dict[str, Any]:
+        """
+        CodeAct-based verification workflow using dynamic claim extraction and search.
+
+        Args:
+            model_card_path: Path to model card file
+            repo_url: Git repository URL (if cloning)
+            repo_path: Local repository path (if using existing)
+            output_dir: Output directory for reports
+            progress_callback: Optional callback function(message: str, data: Dict[str, Any]) for progress updates
+
+        Returns:
+            Verification report dictionary
+        """
+        def emit(message: str, data: Optional[Dict[str, Any]] = None):
+            """Helper to emit progress updates."""
+            if progress_callback:
+                progress_callback(message, data or {})
+            else:
+                print(message)
+
+        output_dir = Path(output_dir) if output_dir else self.workdir / "reports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Step 1: Read model card
+        emit("Step 1: Reading model card...", {"step": 1})
+        card_text = Path(model_card_path).read_text(encoding="utf-8")
+        emit("Model card loaded", {"step": 1})
+
+        # Step 2: Extract claims using LLM
+        emit("\nStep 2: Extracting verifiable claims from model card using LLM...", {"step": 2})
+        
+        # Create claim extractor with logger that emits to progress callback
+        def claim_logger(message: str):
+            emit(f"  [Claim Extractor] {message}", {"step": 2, "log": message})
+        
+        try:
+            emit(f"  Initializing LLM claim extractor (provider: {self.llm_provider}, model: {self.llm_model})...", {"step": 2})
+            claim_extractor = LLMClaimExtractor(
+                llm_provider=self.llm_provider,
+                logger=claim_logger,
+                model=self.llm_model
+            )
+            emit(f"  LLM claim extractor initialized successfully", {"step": 2})
+            
+            emit(f"  Calling LLM to extract claims from model card ({len(card_text)} chars)...", {"step": 2})
+            claims = claim_extractor.extract_claims(card_text)
+            emit(f"Extracted {len(claims)} verifiable claims", {"step": 2, "claim_count": len(claims)})
+        except Exception as e:
+            import traceback
+            error_msg = f"ERROR during claim extraction: {e}\n{traceback.format_exc()}"
+            emit(error_msg, {"step": 2, "error": str(e), "traceback": traceback.format_exc()})
+            raise
+        
+        # Show claims summary
+        for idx, claim in enumerate(claims, 1):
+            emit(f"  Claim {idx}: [{claim.get('category')}] {claim.get('description')[:80]}...")
+
+        # Step 3: Prepare repository
+        emit("\nStep 3: Preparing repository...", {"step": 3})
+        if repo_url:
+            emit(f"Cloning repository from {repo_url}...")
+            repo_path = self.repo_tool.clone(repo_url)
+            emit(f"Repository cloned successfully", {"step": 3, "repo_path": repo_path})
+        elif not repo_path:
+            raise ValueError("Either repo_url or repo_path must be provided")
+
+        repo_path_obj = Path(repo_path)
+        emit(f"Using repository: {repo_path}", {"step": 3, "repo_path": str(repo_path)})
+
+        # Step 4: Initialize CodeAct verifier with repo path
+        emit("\nStep 4: Initializing CodeAct verifier with search tools...", {"step": 4})
+        verifier = CodeActVerifier(
+            repo_path=str(repo_path_obj),
+            llm_provider=self.llm_provider,
+            ast_grep_binary=self.sg_binary,
+            model=self.llm_model
+        )
+        emit("CodeAct verifier initialized", {"step": 4})
+
+        # Step 5: Verify claims in parallel using generated Python glue code
+        emit("\nStep 5: Verifying claims in parallel using CodeAct (LLM-generated Python + search tools)...", {"step": 5})
+        max_workers = 1
+        emit(f"  Using sequential verification for {len(claims)} claims", {"step": 5})
+        
+        def verification_progress(message: str, current: int, total: int):
+            emit(message, {"step": 5, "current": current, "total": total})
+        
+        # Execute verification in parallel
+        verification_results = verifier.verify_claims_batch(
+            claims,
+            max_workers=max_workers,
+            progress_callback=verification_progress
+        )
+        
+        # Summary of results
+        emit("\nVerification complete! Summary:", {"step": 5})
+        for result in verification_results:
+            verified = result.get("verified", False)
+            confidence = result.get("confidence", 0.0)
+            claim_desc = result.get("claim", {}).get("description", "unknown")
+            
+            status = "✓ VERIFIED" if verified else "✗ NOT VERIFIED"
+            emit(
+                f"  {status} [{confidence:.0%}] {claim_desc[:60]}...",
+                {
+                    "step": 5,
+                    "claim_id": result.get("claim_id"),
+                    "verified": verified,
+                    "confidence": confidence
+                }
+            )
+
+        # Step 6: Generate risk assessment table
+        emit("\nStep 6: Generating risk assessment table (LLM analysis of results)...", {"step": 6})
+        risk_assessment = verifier.generate_risk_assessment_table(claims, verification_results)
+        
+        overall_risk = risk_assessment.get("overall_risk", "UNKNOWN")
+        risk_summary = risk_assessment.get("summary", "")
+        
+        emit(f"Overall Risk Level: {overall_risk}", {"step": 6, "overall_risk": overall_risk})
+        emit(f"Summary: {risk_summary}", {"step": 6, "summary": risk_summary})
+        
+        # Step 7: Calculate overall consistency score
+        emit("\nStep 7: Calculating consistency scores...", {"step": 7})
+        
+        verified_count = sum(1 for r in verification_results if r.get("verified", False))
+        total_count = len(verification_results)
+        consistency_score = verified_count / total_count if total_count > 0 else 0.0
+        
+        # Weight by confidence
+        weighted_score = sum(
+            r.get("confidence", 0.0) if r.get("verified", False) else 0.0
+            for r in verification_results
+        ) / total_count if total_count > 0 else 0.0
+        
+        emit(
+            f"Consistency score: {consistency_score:.1%} ({verified_count}/{total_count} claims verified)",
+            {"step": 7, "consistency_score": consistency_score, "weighted_score": weighted_score}
+        )
+        emit(f"Confidence-weighted score: {weighted_score:.1%}", {"step": 7})
+
+        # Step 8: Generate reports
+        emit("\nStep 8: Generating reports...", {"step": 8})
+        
+        report = {
+            "model_card": model_card_path,
+            "repository": str(repo_path),
+            "verification_method": "codeact_parallel",
+            "claims_count": total_count,
+            "verified_count": verified_count,
+            "consistency_score": consistency_score,
+            "weighted_score": weighted_score,
+            "overall_risk": overall_risk,
+            "risk_assessment": risk_assessment,
+            "claims": claims,
+            "verification_results": verification_results,
+            "summary_by_category": self._summarize_by_category(verification_results),
+        }
+
+        # Save JSON report
+        json_reporter = JSONReporter(str(output_dir / "codeact_verification_report.json"))
+        json_reporter.emit(report)
+
+        # Save Markdown report
+        md_reporter = MarkdownReporter(str(output_dir / "codeact_verification_report.md"))
+        md_reporter.emit(report)
+
+        # Check if using a temporary directory
+        is_temp_dir = str(output_dir).startswith(tempfile.gettempdir())
+        if is_temp_dir:
+            emit(f"\nReports generated successfully", {"step": 8, "output_dir": str(output_dir)})
+        else:
+            emit(f"\nReports written to {output_dir}", {"step": 8, "output_dir": str(output_dir)})
+        emit("  - codeact_verification_report.json")
+        emit("  - codeact_verification_report.md")
+
+        emit("\nCodeAct verification complete!", {"step": 9, "report": report})
+        return report
+
+    def _summarize_by_category(self, verification_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Summarize verification results by category."""
+        summary = {}
+        
+        for result in verification_results:
+            claim = result.get("claim", {})
+            category = claim.get("category", "unknown")
+            
+            if category not in summary:
+                summary[category] = {
+                    "total": 0,
+                    "verified": 0,
+                    "failed": 0,
+                    "avg_confidence": 0.0
+                }
+            
+            summary[category]["total"] += 1
+            if result.get("verified", False):
+                summary[category]["verified"] += 1
+            else:
+                summary[category]["failed"] += 1
+            summary[category]["avg_confidence"] += result.get("confidence", 0.0)
+        
+        # Calculate averages
+        for category, stats in summary.items():
+            if stats["total"] > 0:
+                stats["avg_confidence"] /= stats["total"]
+                stats["verification_rate"] = stats["verified"] / stats["total"]
+        
+        return summary
 
     def _extract_notebook_outputs_deprecated(self, notebook_paths: List[str]) -> Dict[str, Any]:
         """

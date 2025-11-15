@@ -22,9 +22,10 @@ type VerificationReport = {
 type Props = {
   report: VerificationReport;
   type: "model-card" | "notebooks";
+  showSummary?: boolean;
 };
 
-export function VerificationResults({ report, type }: Props) {
+export function VerificationResults({ report, type, showSummary = true }: Props) {
   const score = report.consistency_score ?? 0;
   const evidenceTable = report.evidence_table || {};
   
@@ -69,43 +70,45 @@ export function VerificationResults({ report, type }: Props) {
       <CardContent className="flex-1 min-h-0 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="space-y-4 pr-4">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className={`text-3xl font-bold ${getScoreColor(score)}`}>
-                      {(score * 100).toFixed(0)}%
+            {/* Summary Stats - now optional, shown on Dashboard instead */}
+            {showSummary && (
+              <div className="grid grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <div className={`text-3xl font-bold ${getScoreColor(score)}`}>
+                        {(score * 100).toFixed(0)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Consistency Score
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Consistency Score
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold">{totalIssues}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Total Findings
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold">{totalIssues}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Total Findings
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <div className={`text-3xl font-bold ${criticalIssues > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {criticalIssues}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Critical Issues
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className={`text-3xl font-bold ${criticalIssues > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {criticalIssues}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Critical Issues
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Evidence by Category */}
             <div className="space-y-3">

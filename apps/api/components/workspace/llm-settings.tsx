@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Settings, Check, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-type LLMProvider = "openai" | "anthropic";
+type LLMProvider = "openai" | "anthropic" | "openrouter";
 
 interface LLMConfig {
   provider: LLMProvider;
@@ -48,6 +48,24 @@ const ANTHROPIC_MODELS = [
   { value: "claude-3-opus-20240229", label: "Claude 3 Opus" },
   { value: "claude-3-sonnet-20240229", label: "Claude 3 Sonnet" },
   { value: "claude-3-haiku-20240307", label: "Claude 3 Haiku" },
+];
+
+const OPENROUTER_MODELS = [
+  // OpenAI models via OpenRouter
+  { value: "openai/gpt-5-pro", label: "GPT-5 Pro (via OpenRouter)", badge: "Latest" },
+  { value: "openai/gpt-5-codex", label: "GPT-5 Codex (via OpenRouter)", badge: "Coding" },
+  { value: "openai/gpt-4o", label: "GPT-4o (via OpenRouter)", badge: "Latest" },
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (via OpenRouter)", badge: "Fast" },
+  { value: "openai/gpt-4-turbo", label: "GPT-4 Turbo (via OpenRouter)" },
+  // Anthropic models via OpenRouter
+  { value: "anthropic/claude-sonnet-4-5", label: "Claude Sonnet 4.5 (via OpenRouter)" },
+  { value: "anthropic/claude-opus-4-1", label: "Claude Opus 4.1 (via OpenRouter)", badge: "Powerful" },
+  { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (via OpenRouter)" },
+  { value: "anthropic/claude-3-opus", label: "Claude 3 Opus (via OpenRouter)" },
+  // Other popular models
+  { value: "google/gemini-pro-1.5", label: "Gemini Pro 1.5" },
+  { value: "meta-llama/llama-3.1-405b-instruct", label: "Llama 3.1 405B" },
+  { value: "mistralai/mistral-large", label: "Mistral Large" },
 ];
 
 export function LLMSettings() {
@@ -92,7 +110,8 @@ export function LLMSettings() {
     }
 
     if (!apiKey && provider !== currentConfig?.provider) {
-      setError(`Please enter your ${provider === "openai" ? "OpenAI" : "Anthropic"} API key`);
+      const providerName = provider === "openai" ? "OpenAI" : provider === "anthropic" ? "Anthropic" : "OpenRouter";
+      setError(`Please enter your ${providerName} API key`);
       return;
     }
 
@@ -133,12 +152,19 @@ export function LLMSettings() {
   };
 
   const getModels = () => {
-    return provider === "openai" ? OPENAI_MODELS : ANTHROPIC_MODELS;
+    if (provider === "openai") return OPENAI_MODELS;
+    if (provider === "anthropic") return ANTHROPIC_MODELS;
+    return OPENROUTER_MODELS;
   };
 
   const getCurrentModelLabel = () => {
     if (!currentConfig) return "Not configured";
-    const models = currentConfig.provider === "openai" ? OPENAI_MODELS : ANTHROPIC_MODELS;
+    const models = 
+      currentConfig.provider === "openai" 
+        ? OPENAI_MODELS 
+        : currentConfig.provider === "anthropic"
+        ? ANTHROPIC_MODELS
+        : OPENROUTER_MODELS;
     const modelInfo = models.find((m) => m.value === currentConfig.model);
     return modelInfo ? modelInfo.label : currentConfig.model;
   };
@@ -166,7 +192,13 @@ export function LLMSettings() {
               <AlertDescription className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-600" />
                 <span className="text-sm">
-                  Current: <strong>{currentConfig.provider === "openai" ? "OpenAI" : "Anthropic"}</strong> -{" "}
+                  Current: <strong>
+                    {currentConfig.provider === "openai" 
+                      ? "OpenAI" 
+                      : currentConfig.provider === "anthropic" 
+                      ? "Anthropic" 
+                      : "OpenRouter"}
+                  </strong> -{" "}
                   {getCurrentModelLabel()}
                 </span>
               </AlertDescription>
@@ -183,6 +215,7 @@ export function LLMSettings() {
               <SelectContent>
                 <SelectItem value="openai">OpenAI</SelectItem>
                 <SelectItem value="anthropic">Anthropic</SelectItem>
+                <SelectItem value="openrouter">OpenRouter</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -222,7 +255,7 @@ export function LLMSettings() {
               placeholder={
                 provider === currentConfig?.provider
                   ? "Leave blank to keep existing key"
-                  : `Enter your ${provider === "openai" ? "OpenAI" : "Anthropic"} API key`
+                  : `Enter your ${provider === "openai" ? "OpenAI" : provider === "anthropic" ? "Anthropic" : "OpenRouter"} API key`
               }
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
@@ -230,7 +263,9 @@ export function LLMSettings() {
             <p className="text-xs text-muted-foreground">
               {provider === "openai"
                 ? "Get your API key from platform.openai.com"
-                : "Get your API key from console.anthropic.com"}
+                : provider === "anthropic"
+                ? "Get your API key from console.anthropic.com"
+                : "Get your API key from openrouter.ai/keys"}
             </p>
           </div>
 
@@ -250,6 +285,14 @@ export function LLMSettings() {
                 <li>• Opus 4.1: Most capable reasoning (NEW)</li>
                 <li>• Haiku 4.5: Fastest, low latency (NEW)</li>
                 <li>• Claude 3.5: Previous generation</li>
+              </ul>
+            )}
+            {provider === "openrouter" && (
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• Access GPT-4, Claude, Gemini, and more</li>
+                <li>• Unified API for multiple providers</li>
+                <li>• Pay-as-you-go pricing</li>
+                <li>• No vendor lock-in</li>
               </ul>
             )}
           </div>

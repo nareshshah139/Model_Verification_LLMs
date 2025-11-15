@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import { getLLMConfig } from "@/src/lib/llm-config";
+import mammoth from "mammoth";
+import { optimizeDocxText, getOptimizationStats } from "@/src/lib/docx-optimizer";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +23,32 @@ export async function POST(request: NextRequest) {
       const absolutePath = path.isAbsolute(modelCardPath)
         ? modelCardPath
         : path.join(process.cwd(), modelCardPath);
-      modelCardText = await fs.readFile(absolutePath, "utf-8");
+      
+      // Check if it's a DOCX file
+      if (absolutePath.toLowerCase().endsWith('.docx')) {
+        // Extract text from DOCX using mammoth
+        const buffer = await fs.readFile(absolutePath);
+        const result = await mammoth.extractRawText({ buffer });
+        const rawText = result.value;
+        
+        // Optimize the extracted text to reduce token count
+        modelCardText = optimizeDocxText(rawText);
+        
+        // Log optimization stats for debugging
+        const stats = getOptimizationStats(rawText, modelCardText);
+        console.log(`DOCX optimization: ${stats.originalTokens} → ${stats.optimizedTokens} tokens (${stats.reductionPercent} reduction)`);
+        
+        if (result.messages && result.messages.length > 0) {
+          console.warn("DOCX extraction warnings:", result.messages);
+        }
+      } else {
+        // For markdown or text files, read as UTF-8
+        modelCardText = await fs.readFile(absolutePath, "utf-8");
+      }
+      try {
+        const mu = process.memoryUsage();
+        console.log(`[VERIFY-MC] After reading model card: rss=${(mu.rss/(1024*1024)).toFixed(1)}MB heapUsed=${(mu.heapUsed/(1024*1024)).toFixed(1)}MB len=${modelCardText.length}`);
+      } catch {}
     } catch (error) {
       return new Response(
         JSON.stringify({ error: `Failed to read model card: ${error}` }),
@@ -44,31 +71,42 @@ export async function POST(request: NextRequest) {
 
     // Use requested provider if provided, otherwise use configured provider
     const llmProvider = requestedProvider || llmConfig.provider;
+    const llmModel = llmConfig.model;
     
-    // Get the appropriate API key
-    const apiKey = llmProvider === "openai" 
-      ? process.env.OPENAI_API_KEY 
-      : process.env.ANTHROPIC_API_KEY;
+    // Get the appropriate API key (support OpenRouter as well)
+    const apiKey =
+      llmProvider === "openai"
+        ? process.env.OPENAI_API_KEY
+        : llmProvider === "anthropic"
+        ? process.env.ANTHROPIC_API_KEY
+        : process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
       return new Response(
         JSON.stringify({ 
-          error: `${llmProvider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"} not configured. Please set it in LLM Settings or environment variables.` 
+          error: `${
+            llmProvider === "openai"
+              ? "OPENAI_API_KEY"
+              : llmProvider === "anthropic"
+              ? "ANTHROPIC_API_KEY"
+              : "OPENROUTER_API_KEY"
+          } not configured. Please set it in LLM Settings or environment variables.` 
         }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Call CodeAct agent API streaming endpoint
+    // Call CodeAct agent API streaming endpoint (dynamic, model-card-driven mode)
     const codeactUrl = process.env.CODEACT_API_URL || "http://localhost:8001";
     
-    const response = await fetch(`${codeactUrl}/verify/stream`, {
+    const response = await fetch(`${codeactUrl}/verify/codeact/stream`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         // Pass API key to CodeAct service via header
         "X-API-Key": apiKey,
         "X-LLM-Provider": llmProvider,
+        "X-LLM-Model": llmModel,
       },
       body: JSON.stringify({
         model_card_text: modelCardText,
@@ -76,6 +114,7 @@ export async function POST(request: NextRequest) {
         runtime_enabled: false,
         sg_binary: "sg",
         llm_provider: llmProvider,
+        llm_model: llmModel,
       }),
     });
 
@@ -101,6 +140,7 @@ export async function POST(request: NextRequest) {
 
           const decoder = new TextDecoder();
           let buffer = '';
+          let eventCount = 0;
 
           while (true) {
             const { done, value } = await reader.read();
@@ -121,6 +161,13 @@ export async function POST(request: NextRequest) {
               if (line.trim()) {
                 // Forward SSE line to client
                 controller.enqueue(encoder.encode(line + '\n'));
+                eventCount++;
+                if (eventCount % 20 === 0) {
+                  try {
+                    const mu = process.memoryUsage();
+                    console.log(`[VERIFY-MC] SSE forwarded #${eventCount}, rss=${(mu.rss/(1024*1024)).toFixed(1)}MB, heapUsed=${(mu.heapUsed/(1024*1024)).toFixed(1)}MB, lineBytes=${Buffer.byteLength(line, 'utf8')}`);
+                  } catch {}
+                }
               }
             }
           }

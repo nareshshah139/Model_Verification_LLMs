@@ -9,14 +9,21 @@ import { LLMSettings } from "./llm-settings";
  * Superseding tab above the center tabs.
  * - "Notebook" keeps you in /workspace (the 3-pane UI).
  * - "Dashboard" navigates to /dashboard (outside the 3-pane UI).
+ * - "Delta View" navigates to /dashboard/delta (drift detection UI).
  */
 export function SuperTabs() {
   const router = useRouter();
   const pathname = usePathname();
-  const [value, setValue] = useState<"notebook" | "dashboard">("notebook");
+  const [value, setValue] = useState<"notebook" | "dashboard" | "delta">("notebook");
 
   useEffect(() => {
-    setValue(pathname.startsWith("/dashboard") ? "dashboard" : "notebook");
+    if (pathname.startsWith("/dashboard/delta")) {
+      setValue("delta");
+    } else if (pathname.startsWith("/dashboard")) {
+      setValue("dashboard");
+    } else {
+      setValue("notebook");
+    }
   }, [pathname]);
 
   return (
@@ -27,6 +34,8 @@ export function SuperTabs() {
           onValueChange={(v: string) => {
             if (v === "dashboard") {
               router.push("/dashboard");
+            } else if (v === "delta") {
+              router.push("/dashboard/delta");
             } else {
               router.push("/workspace");
             }
@@ -35,6 +44,7 @@ export function SuperTabs() {
           <TabsList>
             <TabsTrigger value="notebook">Notebook</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="delta">Delta View</TabsTrigger>
           </TabsList>
         </Tabs>
         

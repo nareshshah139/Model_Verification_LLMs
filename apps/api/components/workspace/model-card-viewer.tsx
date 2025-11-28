@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, CheckCircle, FileText, FlaskConical } from "lucide-react";
-import { VerificationResults } from "./verification-results";
 import { useWorkspace } from "./workspace-context";
 
 type Props = {
@@ -102,6 +101,232 @@ export function ModelCardViewer({ path, type }: Props) {
     loadContent();
   }, [path, type]);
 
+  // Check if verification JSON file exists
+  const checkVerificationJsonExists = async (): Promise<boolean> => {
+    try {
+      const response = await fetch('/model_card_claims_verification.json', {
+        method: 'HEAD',
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  // Stream verification data from existing JSON file with formatted output
+  const streamFromExistingVerification = async () => {
+    try {
+      // ============================================
+      // PHASE 1: CLAIM EXTRACTION
+      // ============================================
+      setProgressMessages([{
+        message: '📋 **Extracting claims now...**',
+        timestamp: Date.now(),
+      }]);
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Fetch claims JSON
+      const claimsResponse = await fetch('/model_card_claims.json');
+      if (!claimsResponse.ok) {
+        throw new Error('Failed to load claims JSON');
+      }
+
+      const claimsData = await claimsResponse.json();
+      const claims = claimsData.claims || [];
+
+      // Stream each extracted claim
+      for (let i = 0; i < claims.length; i++) { // Stream ALL claims
+        const claim = claims[i];
+        await new Promise(resolve => setTimeout(resolve, 80)); // Delay between claims
+        
+        const claimId = claim?.id || `claim_${i + 1}`;
+        const description = claim?.description || 'No description available';
+        const category = claim?.category || 'uncategorized';
+        const claimType = claim?.claim_type || 'unknown';
+        
+        let claimMessage = `\n**Claim ${i + 1}/${claims.length}**: ${claimId}\n\n`;
+        claimMessage += `📋 **Description**: ${description}\n\n`;
+        claimMessage += `🏷️ **Category**: ${category}\n`;
+        claimMessage += `🔍 **Type**: ${claimType}\n\n`;
+        
+        if (claim?.verification_strategy) {
+          claimMessage += `**Verification Strategy**: ${claim.verification_strategy}\n\n`;
+        }
+        
+        setProgressMessages(prev => [...prev, {
+          message: claimMessage,
+          step: i + 1,
+          timestamp: Date.now(),
+        }]);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+      setProgressMessages(prev => [...prev, {
+        message: `\n✓ **Claim extraction complete!** Total: **${claims.length} claims**`,
+        timestamp: Date.now(),
+      }]);
+
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const uniqueCategories = [...new Set(claims.map((c: any) => c?.category).filter(Boolean))];
+      const uniqueClaimTypes = [...new Set(claims.map((c: any) => c?.claim_type).filter(Boolean))];
+      
+      setProgressMessages(prev => [...prev, {
+        message: `\n${'='.repeat(80)}\n\n` +
+                 `📊 **Extraction Summary**:\n` +
+                 `- Total Claims: ${claims.length}\n` +
+                 `- Categories: ${uniqueCategories.length}\n` +
+                 `- Claim Types: ${uniqueClaimTypes.length}\n\n` +
+                 `${'='.repeat(80)}`,
+        timestamp: Date.now(),
+      }]);
+
+      // ============================================
+      // PHASE 2: CLAIM VERIFICATION
+      // ============================================
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      // Fetch the verification JSON
+      const verificationResponse = await fetch('/model_card_claims_verification.json');
+      if (!verificationResponse.ok) {
+        throw new Error('Failed to load verification JSON');
+      }
+
+      const verificationData = await verificationResponse.json();
+      const totalVerifications = verificationData.claim_verifications?.length || 0;
+      console.log(`Loaded verification data with ${totalVerifications} verifications`);
+
+      // Stream metadata
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const metadata = verificationData.verification_metadata || {};
+      const summary = metadata.verification_summary || {};
+      
+      setProgressMessages(prev => [...prev, {
+        message: `\n📊 **Verification Metadata**\n` +
+                 `- Engine: ${metadata.verification_engine || 'Unknown'}\n` +
+                 `- Source: ${metadata.model_card_source || 'Unknown'}\n`,
+        timestamp: Date.now(),
+      }]);
+
+      // Stream each claim verification
+      const verifications = verificationData.claim_verifications || [];
+      console.log(`Starting to stream ${verifications.length} claim verifications...`);
+      
+      for (let i = 0; i < verifications.length; i++) {
+        try {
+          const claim = verifications[i];
+          
+          // Small delay between claims for streaming effect
+          await new Promise(resolve => setTimeout(resolve, 80));
+          
+          // Format claim with Reasoning and Code Execution tags
+          let claimMessage = `\n${'='.repeat(80)}\n`;
+          claimMessage += `\n**${claim.claim_id || 'Unknown Claim'}**: ${claim.claim_description || 'No description'}\n\n`;
+          
+          // Status badge
+          const statusEmoji = claim.verification_status === 'verified' ? '✅' :
+                             claim.verification_status === 'partially_verified' ? '⚠️' :
+                             claim.verification_status === 'not_verified' ? '❌' : '❓';
+          const confidenceScore = claim.confidence_score != null ? (claim.confidence_score * 100).toFixed(0) : 'N/A';
+          claimMessage += `${statusEmoji} **Status**: ${claim.verification_status || 'unknown'} (Confidence: ${confidenceScore}%)\n\n`;
+          
+          // *Reasoning* Section
+          if (claim.verification_notes) {
+            claimMessage += `**<Reasoning>**\n`;
+            claimMessage += `${claim.verification_notes}\n`;
+            claimMessage += `**</Reasoning>**\n\n`;
+          }
+          
+          // *Code Execution* Section (Evidence)
+          if (claim.evidence_found && claim.evidence_found.length > 0) {
+            claimMessage += `**<Code Execution>**\n`;
+            claimMessage += `Found ${claim.evidence_found.length} piece(s) of evidence:\n\n`;
+            
+            claim.evidence_found.forEach((evidence: any, idx: number) => {
+              const evidenceType = evidence?.evidence_type || 'unknown';
+              const relevanceScore = evidence?.relevance_score != null ? (evidence.relevance_score * 100).toFixed(0) : 'N/A';
+              const source = evidence?.source || 'Unknown source';
+              const cellInfo = evidence?.cell_number !== undefined ? ` [Cell ${evidence.cell_number}]` : '';
+              const evidenceText = evidence?.evidence_text || 'No evidence text';
+              const truncatedText = evidenceText.substring(0, 200) + (evidenceText.length > 200 ? '...' : '');
+              
+              claimMessage += `  ${idx + 1}. **${evidenceType}** (relevance: ${relevanceScore}%)\n`;
+              claimMessage += `     Source: \`${source}\`${cellInfo}\n`;
+              claimMessage += `     Evidence: "${truncatedText}"\n\n`;
+            });
+            
+            claimMessage += `**</Code Execution>**\n\n`;
+          }
+          
+          // Code References
+          if (claim.code_references && claim.code_references.length > 0) {
+            claimMessage += `**Code References**: ${claim.code_references.join(', ')}\n\n`;
+          }
+          
+          // Contradictions
+          if (claim.contradictions && claim.contradictions.length > 0) {
+            claimMessage += `**⚠️ Issues Found**:\n`;
+            claim.contradictions.forEach((contradiction: any) => {
+              const severity = contradiction?.severity ? contradiction.severity.toUpperCase() : 'UNKNOWN';
+              const type = contradiction?.type || 'unknown';
+              const description = contradiction?.description || 'No description';
+              claimMessage += `  - [${severity}] ${type}: ${description}\n`;
+            });
+            claimMessage += `\n`;
+          }
+          
+          setProgressMessages(prev => [...prev, {
+            message: claimMessage,
+            step: i + 1,
+            timestamp: Date.now(),
+          }]);
+          
+          console.log(`Streamed claim ${i + 1}/${verifications.length}: ${claim.claim_id}`);
+        } catch (error) {
+          console.error(`Error streaming claim ${i + 1}:`, error);
+          // Add error message but continue with next claim
+          setProgressMessages(prev => [...prev, {
+            message: `\n⚠️ **Error processing claim ${i + 1}**: ${error instanceof Error ? error.message : 'Unknown error'}\n`,
+            step: i + 1,
+            timestamp: Date.now(),
+          }]);
+        }
+      }
+      
+      console.log(`Finished streaming all ${verifications.length} claims`);
+
+      // Summary
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const assessment = verificationData.overall_assessment || {};
+      
+      setProgressMessages(prev => {
+        const finalMessage = {
+          message: `\n${'='.repeat(80)}\n\n` +
+                   `**✓ Verification Complete!**\n\n` +
+                   `**Overall Assessment**:\n` +
+                   `- Risk Level: ${assessment.risk_level || 'Unknown'}\n` +
+                   `- ${assessment.summary || 'No summary available'}\n\n` +
+                   `**Process Summary**:\n` +
+                   `1. ✓ Extracted ${claims.length} claims from model card\n` +
+                   `2. ✓ Streamed ${verifications.length} verification results\n` +
+                   `3. ✓ Total messages in log: ${prev.length + 1}\n\n` +
+                   `All results streamed from existing verification data.`,
+          timestamp: Date.now(),
+        };
+        console.log(`Total progress messages before final: ${prev.length}`);
+        return [...prev, finalMessage];
+      });
+
+      // Save to context
+      saveVerificationReport(path, verificationData);
+      
+    } catch (err) {
+      throw new Error(`Failed to stream verification: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const handleVerifyModelCard = async () => {
     setVerifying(true);
     setError(null);
@@ -109,6 +334,16 @@ export function ModelCardViewer({ path, type }: Props) {
     setActiveTab("verification"); // Switch to verification tab immediately
     
     try {
+      // First, check if verification JSON already exists
+      const verificationJsonExists = await checkVerificationJsonExists();
+      
+      if (verificationJsonExists) {
+        // Stream from existing JSON file with formatted output
+        await streamFromExistingVerification();
+        return;
+      }
+      
+      // Otherwise, proceed with normal verification
       // Determine the repo path - adjust this based on your structure
       const repoPath = "/Users/nshah/Documents/AST-RAG-Based-Model-Card-Checks/Lending-Club-Credit-Scoring";
       
@@ -162,20 +397,55 @@ export function ModelCardViewer({ path, type }: Props) {
                   timestamp: Date.now(),
                   };
                   const next = [...prev, nextItem];
-                  // Keep only last 200 entries to cap memory
-                  return next.length > 200 ? next.slice(next.length - 200) : next;
+                  // Keep only last 1000 entries to cap memory (increased to show more claims)
+                  return next.length > 1000 ? next.slice(next.length - 1000) : next;
                 });
               } else if (data.type === 'complete') {
                 // Final report received
                 if (data.report) {
                   saveVerificationReport(path, data.report);
-                  setProgressMessages(prev => {
-                    const next = [...prev, {
-                    message: '✓ Verification complete!',
-                    timestamp: Date.now(),
-                    }];
-                    return next.length > 200 ? next.slice(next.length - 200) : next;
-                  });
+                  
+                  // Auto-save verification results to filesystem and public folder
+                  try {
+                    const saveResponse = await fetch('/api/save-verification', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        verification: data.report,
+                        claims: data.report.claims ? { claims: data.report.claims } : null
+                      })
+                    });
+                    
+                    if (saveResponse.ok) {
+                      const saveResult = await saveResponse.json();
+                      console.log('✓ Verification results auto-saved:', saveResult.locations);
+                      setProgressMessages(prev => {
+                        const next = [...prev, {
+                          message: '✓ Verification complete and saved to dashboard!',
+                          timestamp: Date.now(),
+                        }];
+                        return next.length > 1000 ? next.slice(next.length - 1000) : next;
+                      });
+                    } else {
+                      console.warn('Failed to auto-save verification results');
+                      setProgressMessages(prev => {
+                        const next = [...prev, {
+                          message: '✓ Verification complete! (auto-save failed)',
+                          timestamp: Date.now(),
+                        }];
+                        return next.length > 1000 ? next.slice(next.length - 1000) : next;
+                      });
+                    }
+                  } catch (saveError) {
+                    console.error('Error auto-saving verification:', saveError);
+                    setProgressMessages(prev => {
+                      const next = [...prev, {
+                        message: '✓ Verification complete!',
+                        timestamp: Date.now(),
+                      }];
+                      return next.length > 1000 ? next.slice(next.length - 1000) : next;
+                    });
+                  }
                 }
               } else if (data.type === 'error') {
                 throw new Error(data.message || 'Verification failed');
@@ -251,7 +521,17 @@ export function ModelCardViewer({ path, type }: Props) {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(6));
+              // Strip code fences before parsing (in case LLM wrapped JSON)
+              const payload = line.slice(6).trimStart();
+              const cleaned = payload
+                .replace(/^```json\s*/im, "")
+                .replace(/^```\s*/im, "")
+                .replace(/```\s*$/im, "")
+                .trim();
+              
+              if (!cleaned) continue;
+              
+              const data = JSON.parse(cleaned);
               
               if (data.type === 'progress') {
                 // Add progress message
@@ -275,16 +555,45 @@ export function ModelCardViewer({ path, type }: Props) {
                     }
                   }
                   
-                  setProgressMessages(prev => [...prev, {
-                    message: '✓ Verification complete!',
-                    timestamp: Date.now(),
-                  }]);
+                  // Auto-save verification results to filesystem and public folder
+                  try {
+                    const saveResponse = await fetch('/api/save-verification', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        verification: data.report,
+                        claims: data.report.claims ? { claims: data.report.claims } : null
+                      })
+                    });
+                    
+                    if (saveResponse.ok) {
+                      const saveResult = await saveResponse.json();
+                      console.log('✓ Verification results auto-saved:', saveResult.locations);
+                      setProgressMessages(prev => [...prev, {
+                        message: '✓ Verification complete and saved to dashboard!',
+                        timestamp: Date.now(),
+                      }]);
+                    } else {
+                      console.warn('Failed to auto-save verification results');
+                      setProgressMessages(prev => [...prev, {
+                        message: '✓ Verification complete! (auto-save failed)',
+                        timestamp: Date.now(),
+                      }]);
+                    }
+                  } catch (saveError) {
+                    console.error('Error auto-saving verification:', saveError);
+                    setProgressMessages(prev => [...prev, {
+                      message: '✓ Verification complete!',
+                      timestamp: Date.now(),
+                    }]);
+                  }
                 }
               } else if (data.type === 'error') {
                 throw new Error(data.message || 'Verification failed');
               }
             } catch (parseError) {
-              console.warn('Failed to parse SSE message:', line, parseError);
+              console.warn('Failed to parse SSE message:', line.slice(0, 100), parseError);
+              // Don't crash on parse errors, continue processing stream
             }
           }
         }
@@ -365,11 +674,6 @@ export function ModelCardViewer({ path, type }: Props) {
                 <TabsTrigger value="verification" disabled={!verificationReport}>
                   <CheckCircle className="h-4 w-4 mr-1" />
                   Verification
-                  {verificationReport && (
-                    <Badge variant="secondary" className="ml-2">
-                      {(verificationReport.consistency_score * 100).toFixed(0)}%
-                    </Badge>
-                  )}
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -426,8 +730,9 @@ export function ModelCardViewer({ path, type }: Props) {
                     ol: ({ node, ...props }) => (
                       <ol className="mb-4 ml-6 list-decimal [&>li]:mt-2" {...props} />
                     ),
-                    code: ({ node, inline, children, ...props }) => {
+                    code: ({ node, children, ...props }: any) => {
                       const text = String(children);
+                      const inline = !(props.className && props.className.startsWith('language-'));
                       const hasCodeIssue = verificationReport && verificationReport.evidence_table && 
                         Object.values(verificationReport.evidence_table).some((matches: any) => 
                           Array.isArray(matches) && matches.some((m: any) => 
@@ -529,47 +834,116 @@ export function ModelCardViewer({ path, type }: Props) {
                             </Button>
                           )}
                         </div>
-                        <ScrollArea className="h-[400px]">
+                        <ScrollArea className="h-[700px]">
                           <div className="space-y-2">
-                            {progressMessages.map((msg, idx) => (
-                              <div
-                                key={idx}
-                                className="text-sm p-3 rounded border border-border bg-muted/30 animate-in fade-in slide-in-from-bottom-2 duration-200"
-                              >
-                                <div className="flex items-start gap-2">
-                                  {msg.step && (
-                                    <Badge variant="outline" className="shrink-0">
-                                      Step {msg.step}
-                                    </Badge>
-                                  )}
-                                  <div className="flex-1">
-                                    <div className="font-mono text-xs text-muted-foreground">
-                                      {new Date(msg.timestamp).toLocaleTimeString()}
-                                    </div>
-                                    <div className="mt-1">{msg.message}</div>
-                                    {msg.data && Object.keys(msg.data).length > 0 && (
-                                      <details className="mt-2">
-                                        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                                          View details
-                                        </summary>
-                                        <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-x-auto">
-                                          {JSON.stringify(msg.data, null, 2)}
-                                        </pre>
-                                      </details>
+                            {progressMessages.map((msg, idx) => {
+                              // Check if message contains special tags
+                              const hasReasoningTag = msg.message.includes('<Reasoning>');
+                              const hasCodeExecutionTag = msg.message.includes('<Code Execution>');
+                              
+                              return (
+                                <div
+                                  key={`${idx}-${msg.timestamp}`}
+                                  className={`text-sm p-3 rounded border ${
+                                    hasReasoningTag || hasCodeExecutionTag 
+                                      ? 'border-primary bg-primary/5' 
+                                      : 'border-border bg-muted/30'
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    {msg.step && (
+                                      <Badge variant="outline" className="shrink-0">
+                                        Claim {msg.step}
+                                      </Badge>
                                     )}
+                                    <div className="flex-1">
+                                      <div className="font-mono text-xs text-muted-foreground mb-2">
+                                        {new Date(msg.timestamp).toLocaleTimeString()}
+                                      </div>
+                                      {/* Render message with markdown support */}
+                                      <div className="mt-1 prose prose-sm dark:prose-invert max-w-none [&_p]:my-2 [&_pre]:my-2 [&_ul]:my-2 [&_ol]:my-2">
+                                        <ReactMarkdown
+                                          remarkPlugins={[remarkGfm]}
+                                          components={{
+                                            // Custom component for <Reasoning> tags
+                                            p: ({ node, children, ...props }) => {
+                                              const text = String(children);
+                                              if (text.includes('<Reasoning>') || text.includes('</Reasoning>')) {
+                                                if (text === '<Reasoning>') {
+                                                  return (
+                                                    <div className="my-3 p-3 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded">
+                                                      <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2">
+                                                        🧠 Reasoning
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                } else if (text === '</Reasoning>') {
+                                                  return null;
+                                                }
+                                              }
+                                              if (text.includes('<Code Execution>') || text.includes('</Code Execution>')) {
+                                                if (text === '<Code Execution>') {
+                                                  return (
+                                                    <div className="my-3 p-3 bg-green-50 dark:bg-green-950/30 border-l-4 border-green-500 rounded">
+                                                      <div className="text-xs font-semibold text-green-700 dark:text-green-300 mb-2">
+                                                        ⚡ Code Execution
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                } else if (text === '</Code Execution>') {
+                                                  return null;
+                                                }
+                                              }
+                                              return <p className="my-2" {...props}>{children}</p>;
+                                            },
+                                            code: ({ node, children, ...props }: any) => {
+                                              const inline = !(props.className && props.className.startsWith('language-'));
+                                              return inline ? (
+                                                <code className="relative rounded px-[0.3rem] py-[0.2rem] font-mono text-xs bg-muted" {...props}>
+                                                  {children}
+                                                </code>
+                                              ) : (
+                                                <code className="relative rounded font-mono text-xs" {...props}>
+                                                  {children}
+                                                </code>
+                                              );
+                                            },
+                                            pre: ({ node, ...props }) => (
+                                              <pre className="my-2 bg-muted p-2 rounded overflow-x-auto text-xs" {...props} />
+                                            ),
+                                            strong: ({ node, ...props }) => (
+                                              <strong className="font-semibold" {...props} />
+                                            ),
+                                            ul: ({ node, ...props }) => (
+                                              <ul className="my-2 ml-4 list-disc [&>li]:mt-1" {...props} />
+                                            ),
+                                            ol: ({ node, ...props }) => (
+                                              <ol className="my-2 ml-4 list-decimal [&>li]:mt-1" {...props} />
+                                            ),
+                                          }}
+                                        >
+                                          {msg.message}
+                                        </ReactMarkdown>
+                                      </div>
+                                      {msg.data && Object.keys(msg.data).length > 0 && (
+                                        <details className="mt-2">
+                                          <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                                            View details
+                                          </summary>
+                                          <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-x-auto">
+                                            {JSON.stringify(msg.data, null, 2)}
+                                          </pre>
+                                        </details>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </ScrollArea>
                       </CardContent>
                     </Card>
-                  )}
-                  
-                  {/* Results - Show when report is available */}
-                  {verificationReport && (
-                    <VerificationResults report={verificationReport} type="model-card" showSummary={false} />
                   )}
                 </div>
               ) : (

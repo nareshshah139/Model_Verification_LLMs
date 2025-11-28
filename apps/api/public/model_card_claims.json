@@ -1,0 +1,2748 @@
+{
+  "claims": [
+    {
+      "id": "claim_1",
+      "category": "executive_summary",
+      "claim_type": "high_level_summary",
+      "description": "Model predicts Expected Loss (EL) for retail lending portfolios at application time using historical retail lending data.",
+      "verification_strategy": "Search across notebooks, README, and architecture docs for matching phrasing and confirm that an EL pipeline exists at application time.",
+      "search_queries": [
+        "Model",
+        "Expected",
+        "Loss",
+        "application"
+      ],
+      "expected_evidence": "Design or code that computes EL at application time using historical LendingClub data."
+    },
+    {
+      "id": "claim_2",
+      "category": "executive_summary",
+      "claim_type": "high_level_summary",
+      "description": "PD is a binary classifier using logistic regression and a scorecard on a 300\u2013850 scale where higher scores indicate lower risk.",
+      "verification_strategy": "Inspect PD training code for logistic regression with MLE, confirm score scaling to 300\u2013850 and monotonic relation of score to risk.",
+      "search_queries": [
+        "PD",
+        "logistic",
+        "scorecard",
+        "300-850"
+      ],
+      "expected_evidence": "PD training notebook/module, score scaling routine, and documentation stating higher score = lower risk."
+    },
+    {
+      "id": "claim_3",
+      "category": "executive_summary",
+      "claim_type": "high_level_summary",
+      "description": "LGD is modeled via a two-stage approach: logistic model for Recovery > 0 and linear regression for recovery rate conditional on positive recovery.",
+      "verification_strategy": "Locate LGD hurdle modeling code: Stage 1 logistic for recovery incidence and Stage 2 linear regression for conditional recovery rate.",
+      "search_queries": [
+        "LGD",
+        "two-stage",
+        "logistic",
+        "linear"
+      ],
+      "expected_evidence": "Two-stage LGD pipeline with binary recovery model and conditional regression for recovery rate."
+    },
+    {
+      "id": "claim_4",
+      "category": "executive_summary",
+      "claim_type": "high_level_summary",
+      "description": "EAD is modeled via linear regression on a Credit Conversion Factor (CCF).",
+      "verification_strategy": "Check EAD module for linear regression where target is CCF; verify clipping and mapping to EAD.",
+      "search_queries": [
+        "EAD",
+        "linear",
+        "regression",
+        "CCF"
+      ],
+      "expected_evidence": "Linear regression fit on CCF with code translating predicted CCF into EAD."
+    },
+    {
+      "id": "claim_5",
+      "category": "executive_summary",
+      "claim_type": "high_level_summary",
+      "description": "Credit policy is built on 10 PD-based risk classes and an ROI floor, yielding lower default and EL on the test set while rejecting a limited share of applications.",
+      "verification_strategy": "Find policy documentation/notebooks describing 10 risk classes and ROI floor; check test-set impact analysis on default/EL and reject rate.",
+      "search_queries": [
+        "Credit",
+        "policy",
+        "10",
+        "ROI"
+      ],
+      "expected_evidence": "Policy doc with 10-tier mapping, ROI threshold, and test-set lift charts/tables."
+    },
+    {
+      "id": "claim_6",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Model estimates EL by EL = PD \u00d7 LGD \u00d7 EAD for retail loan portfolio.",
+      "verification_strategy": "Search code for EL aggregation formula and confirm portfolio-level roll-up.",
+      "search_queries": [
+        "EL",
+        "PD",
+        "LGD",
+        "EAD"
+      ],
+      "expected_evidence": "Function or notebook that multiplies PD, LGD, EAD and aggregates by account/portfolio."
+    },
+    {
+      "id": "claim_7",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Model supports credit decisioning, pricing, capital allocation, and regulatory reporting under CECL (ASC 326).",
+      "verification_strategy": "Review usage documentation mapping outputs to underwriting, pricing/ROI, capital/CECL workflows.",
+      "search_queries": [
+        "credit",
+        "pricing",
+        "capital",
+        "CECL"
+      ],
+      "expected_evidence": "Docs or examples connecting EL/PD/LGD/EAD to decisioning, ROI, and CECL reporting."
+    },
+    {
+      "id": "claim_8",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Primary use: Pre-origination credit risk assessment for unsecured personal loans.",
+      "verification_strategy": "Confirm model is positioned for application-time scoring prior to origination.",
+      "search_queries": [
+        "Pre-origination",
+        "unsecured",
+        "personal",
+        "loans"
+      ],
+      "expected_evidence": "Docs stating pre-origination usage and input schema for application-time variables."
+    },
+    {
+      "id": "claim_9",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Secondary uses: Portfolio monitoring, stress testing, CECL provisioning support.",
+      "verification_strategy": "Locate monitoring/stress-test sections and CECL provisioning examples referencing model outputs.",
+      "search_queries": [
+        "monitoring",
+        "stress",
+        "CECL",
+        "provisioning"
+      ],
+      "expected_evidence": "Notebooks or docs showing monitoring dashboards, stress overlays, or provisioning support."
+    },
+    {
+      "id": "claim_10",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Permitted uses include pre-origination risk ranking, pricing analytics, and analytics research.",
+      "verification_strategy": "Check use-policy and governance docs that list allowed uses.",
+      "search_queries": [
+        "Permitted",
+        "risk",
+        "pricing",
+        "research"
+      ],
+      "expected_evidence": "Governance or README section spelling out permitted use cases."
+    },
+    {
+      "id": "claim_11",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Non-permitted uses include any production underwriting, line management, capital or allowance booking until full validation and production controls are complete.",
+      "verification_strategy": "Find restrictions in governance docs noting no production/booking until independent validation.",
+      "search_queries": [
+        "Non-permitted",
+        "production",
+        "underwriting",
+        "capital"
+      ],
+      "expected_evidence": "Explicit prohibition text in model policy or README."
+    },
+    {
+      "id": "claim_12",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Geographic coverage is United States excluding U.S. territories.",
+      "verification_strategy": "Check scope statement and data filters limiting geography to U.S. states only.",
+      "search_queries": [
+        "United",
+        "States",
+        "coverage",
+        "territories"
+      ],
+      "expected_evidence": "Docs or code filtering to U.S. states with explicit exclusion of U.S. territories."
+    },
+    {
+      "id": "claim_13",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Product types are fixed-rate unsecured personal loans with 36 to 60 month terms.",
+      "verification_strategy": "Verify product filter and term constraints in data prep or config.",
+      "search_queries": [
+        "fixed-rate",
+        "unsecured",
+        "36",
+        "60"
+      ],
+      "expected_evidence": "Config or preprocessing code enforcing product type and term range."
+    },
+    {
+      "id": "claim_14",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Customer segment includes Prime, Near-Prime, and Subprime retail borrowers.",
+      "verification_strategy": "Find documentation on coverage of credit tiers and any segmentation logic.",
+      "search_queries": [
+        "Prime",
+        "Near-Prime",
+        "Subprime",
+        "retail"
+      ],
+      "expected_evidence": "Docs noting inclusion of all three tiers and any distribution stats."
+    },
+    {
+      "id": "claim_15",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Portfolio size at monitoring date is approximately 421,000 accounts.",
+      "verification_strategy": "Check monitoring dataset summary and counts.",
+      "search_queries": [
+        "portfolio",
+        "size",
+        "421000",
+        "accounts"
+      ],
+      "expected_evidence": "Monitoring stats or log output showing ~421k account count."
+    },
+    {
+      "id": "claim_16",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Portfolio exposure at monitoring date is $8.5 billion.",
+      "verification_strategy": "Review exposure summary calculations in monitoring notebook.",
+      "search_queries": [
+        "exposure",
+        "8.5",
+        "billion",
+        "portfolio"
+      ],
+      "expected_evidence": "Metric table or chart citing ~$8.5B exposure."
+    },
+    {
+      "id": "claim_17",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Data source is LendingClub loan-level performance data.",
+      "verification_strategy": "Confirm dataset provenance in data catalog and data-loading code.",
+      "search_queries": [
+        "LendingClub",
+        "loan-level",
+        "performance",
+        "data"
+      ],
+      "expected_evidence": "Data loader references to LendingClub historical files."
+    },
+    {
+      "id": "claim_18",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Time horizon is PD = 12 months, LGD/EAD at default, and EL at account level aggregating to portfolio.",
+      "verification_strategy": "Check definitions in docs and confirm time horizons in code (12m PD; LGD/EAD at default).",
+      "search_queries": [
+        "12",
+        "months",
+        "LGD",
+        "EAD"
+      ],
+      "expected_evidence": "Parameter settings or docstrings stating horizons and aggregation levels."
+    },
+    {
+      "id": "claim_19",
+      "category": "purpose_and_scope",
+      "claim_type": "scope",
+      "description": "Out-of-scope: behavior models, collections, secured lending, line-increase strategies, bureau enrichment, macro-econometric overlays.",
+      "verification_strategy": "Find exclusion list and ensure code does not reference these features/models.",
+      "search_queries": [
+        "Out-of-scope",
+        "behavior",
+        "secured",
+        "overlays"
+      ],
+      "expected_evidence": "Scope section listing exclusions; absence of these modules in code."
+    },
+    {
+      "id": "claim_20",
+      "category": "key_model_outputs",
+      "claim_type": "output_definition",
+      "description": "PD Score is a 300\u2013850 point scale credit scorecard.",
+      "verification_strategy": "Check score scaling/mapping logic and any risk-class cutoffs using this range.",
+      "search_queries": [
+        "PD",
+        "Score",
+        "300",
+        "850"
+      ],
+      "expected_evidence": "Scaling utility and documentation showing 300\u2013850 point scale."
+    },
+    {
+      "id": "claim_21",
+      "category": "key_model_outputs",
+      "claim_type": "output_definition",
+      "description": "12-Month PD is the probability of default within the next 12 months.",
+      "verification_strategy": "Confirm PD horizon parameterization and target construction reflect 12 months.",
+      "search_queries": [
+        "12-month",
+        "PD",
+        "probability",
+        "default"
+      ],
+      "expected_evidence": "Target definition and evaluation windows set to 12 months."
+    },
+    {
+      "id": "claim_22",
+      "category": "key_model_outputs",
+      "claim_type": "output_definition",
+      "description": "LGD estimate is a recovery-adjusted loss percentage between 0% and 100%.",
+      "verification_strategy": "Check LGD calculation post-processing/clipping to [0,1].",
+      "search_queries": [
+        "LGD",
+        "recovery",
+        "0%",
+        "100%"
+      ],
+      "expected_evidence": "Code that computes LGD=1\u2212recovery_rate and clips to valid bounds."
+    },
+    {
+      "id": "claim_23",
+      "category": "key_model_outputs",
+      "claim_type": "output_definition",
+      "description": "EAD calculation is outstanding balance at default using credit conversion factors.",
+      "verification_strategy": "Verify EAD = CCF \u00d7 funded_amount implementation.",
+      "search_queries": [
+        "EAD",
+        "outstanding",
+        "default",
+        "CCF"
+      ],
+      "expected_evidence": "Computation translating predicted CCF into EAD at default."
+    },
+    {
+      "id": "claim_24",
+      "category": "key_model_outputs",
+      "claim_type": "output_definition",
+      "description": "Expected Loss is EL = PD \u00d7 LGD \u00d7 EAD measured as dollar amount per account.",
+      "verification_strategy": "Confirm EL is computed per account and in currency units.",
+      "search_queries": [
+        "Expected",
+        "Loss",
+        "EL",
+        "account"
+      ],
+      "expected_evidence": "Per-account EL field in outputs and aggregation logic."
+    },
+    {
+      "id": "claim_25",
+      "category": "key_model_outputs",
+      "claim_type": "output_definition",
+      "description": "Risk classification uses 10-tier risk bands (AA through F).",
+      "verification_strategy": "Inspect mapping of PD/score to 10 tiers and label set AA\u2013F.",
+      "search_queries": [
+        "Risk",
+        "classification",
+        "10-tier",
+        "AA-F"
+      ],
+      "expected_evidence": "Cutoff table or config for 10 risk bands with labels."
+    },
+    {
+      "id": "claim_26",
+      "category": "regulatory_alignment",
+      "claim_type": "regulatory_alignment",
+      "description": "Model is claimed compliant with SR 11-7 Model Risk Management guidelines.",
+      "verification_strategy": "Search governance docs for SR 11-7 mapping and controls coverage.",
+      "search_queries": [
+        "SR 11-7",
+        "MRM",
+        "compliant",
+        "guidelines"
+      ],
+      "expected_evidence": "Control matrix or policy mapping the model lifecycle to SR 11-7."
+    },
+    {
+      "id": "claim_27",
+      "category": "regulatory_alignment",
+      "claim_type": "regulatory_alignment",
+      "description": "Model aligns with CECL accounting standards under ASC 326.",
+      "verification_strategy": "Locate CECL alignment notes and ASC 326 references.",
+      "search_queries": [
+        "CECL",
+        "ASC",
+        "326",
+        "aligns"
+      ],
+      "expected_evidence": "Documentation that connects model outputs to CECL/ASC 326 concepts."
+    },
+    {
+      "id": "claim_28",
+      "category": "regulatory_alignment",
+      "claim_type": "regulatory_alignment",
+      "description": "Model is expected to undergo annual validation by an independent model risk management team.",
+      "verification_strategy": "Check validation plan and independence statement.",
+      "search_queries": [
+        "annual",
+        "validation",
+        "independent",
+        "team"
+      ],
+      "expected_evidence": "Planned cadence and validator independence documented."
+    },
+    {
+      "id": "claim_29",
+      "category": "regulatory_alignment",
+      "claim_type": "regulatory_alignment",
+      "description": "Model is mapped to internal MRM policy, CECL/ACL methodology standard, data governance standard, and ITGC/SOX where EL feeds allowance.",
+      "verification_strategy": "Find the crosswalk to MRM, CECL/ACL, data governance, and ITGC/SOX.",
+      "search_queries": [
+        "MRM",
+        "CECL/ACL",
+        "data",
+        "ITGC/SOX"
+      ],
+      "expected_evidence": "Policy mapping or RACI showing the standards and controls applied."
+    },
+    {
+      "id": "claim_30",
+      "category": "regulatory_alignment",
+      "claim_type": "regulatory_alignment",
+      "description": "Interagency Third-Party Risk Management (2023) applies to the Grid Dynamics engagement.",
+      "verification_strategy": "Verify third-party risk assessment referencing 2023 guidance.",
+      "search_queries": [
+        "Third-Party",
+        "Risk",
+        "Management",
+        "2023"
+      ],
+      "expected_evidence": "TPRM checklist and due diligence aligned to 2023 guidance."
+    },
+    {
+      "id": "claim_31",
+      "category": "regulatory_alignment",
+      "claim_type": "regulatory_alignment",
+      "description": "If results feed CECL, they must align with Interagency ACL Policy Statement (reasonable & supportable period, reversion, overlays, disclosures).",
+      "verification_strategy": "Look for CECL overlay framework and ACL policy alignment notes.",
+      "search_queries": [
+        "ACL",
+        "Policy",
+        "reversion",
+        "disclosures"
+      ],
+      "expected_evidence": "Overlay methodology and documentation covering R&S period, reversion, and disclosures."
+    },
+    {
+      "id": "claim_32",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "PD model estimates 12-month default probability at application time.",
+      "verification_strategy": "Confirm PD horizon and application-time features in PD training code.",
+      "search_queries": [
+        "PD",
+        "12-month",
+        "default",
+        "application"
+      ],
+      "expected_evidence": "PD training script with 12m target and application-time inputs."
+    },
+    {
+      "id": "claim_33",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Target label: 1 = non-default (good), 0 = default (bad).",
+      "verification_strategy": "Inspect target construction routine for label polarity.",
+      "search_queries": [
+        "Target",
+        "label",
+        "non-default",
+        "default"
+      ],
+      "expected_evidence": "Code that encodes good=1, bad=0."
+    },
+    {
+      "id": "claim_34",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Bad class corresponds to defaults such as Charged Off using status fields.",
+      "verification_strategy": "Check mapping from status fields to 'bad' label.",
+      "search_queries": [
+        "bad",
+        "class",
+        "Charged",
+        "Off"
+      ],
+      "expected_evidence": "Labeling code that flags Charged Off (and similar) as default."
+    },
+    {
+      "id": "claim_35",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Algorithm is logistic regression with maximum likelihood estimation.",
+      "verification_strategy": "Verify estimator is logistic regression with MLE solver.",
+      "search_queries": [
+        "logistic",
+        "regression",
+        "maximum",
+        "likelihood"
+      ],
+      "expected_evidence": "Use of sklearn/statsmodels logistic regression with MLE."
+    },
+    {
+      "id": "claim_36",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Model produces a scorecard where higher scores correspond to lower risk.",
+      "verification_strategy": "Inspect score transformation and monotonicity direction.",
+      "search_queries": [
+        "scorecard",
+        "higher",
+        "scores",
+        "lower"
+      ],
+      "expected_evidence": "Score mapping function with higher score => lower PD."
+    },
+    {
+      "id": "claim_37",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Only application-time variables are used; no post-origination behavior.",
+      "verification_strategy": "Review feature list and feature filters to exclude post-origination variables.",
+      "search_queries": [
+        "application-time",
+        "variables",
+        "no",
+        "behavior"
+      ],
+      "expected_evidence": "Feature schema constrained to application-time data only."
+    },
+    {
+      "id": "claim_38",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Categorical variables are dummy encoded with a dropped reference level.",
+      "verification_strategy": "Check preprocessing pipeline for one-hot encoding with reference drop.",
+      "search_queries": [
+        "categorical",
+        "dummy",
+        "reference",
+        "level"
+      ],
+      "expected_evidence": "Transformer that performs OHE and drops one category."
+    },
+    {
+      "id": "claim_39",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Continuous variables are discretized into bins represented by dummies to support monotonic patterns and interpretability.",
+      "verification_strategy": "Inspect binning logic and dummy expansion for continuous features.",
+      "search_queries": [
+        "continuous",
+        "bins",
+        "monotonic",
+        "interpretability"
+      ],
+      "expected_evidence": "Binning code plus documentation on bin edges and rationale."
+    },
+    {
+      "id": "claim_40",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Missingness is treated as a separate category when predictive.",
+      "verification_strategy": "Look for explicit missing-category handling in preprocessors.",
+      "search_queries": [
+        "missingness",
+        "separate",
+        "category",
+        "predictive"
+      ],
+      "expected_evidence": "Pipelines that encode missing as its own bin/category."
+    },
+    {
+      "id": "claim_41",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Feature selection via coefficient significance with p-value <= 0.05; insignificant dummies removed.",
+      "verification_strategy": "Check model selection steps for p-value thresholding and dummy pruning.",
+      "search_queries": [
+        "feature",
+        "selection",
+        "p-value",
+        "0.05"
+      ],
+      "expected_evidence": "Statsmodels output or equivalent filtering by p-value."
+    },
+    {
+      "id": "claim_42",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Score scaling uses integerized points with observed range between 300 and 850.",
+      "verification_strategy": "Review score scaling function and observed score distribution range.",
+      "search_queries": [
+        "score",
+        "scaling",
+        "integerized",
+        "300-850"
+      ],
+      "expected_evidence": "Code that converts log-odds to integer points in 300\u2013850 range."
+    },
+    {
+      "id": "claim_43",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Risk segmentation uses 10 PD-based classes: AA, A, AB, BB, B, BC, C, CD, DD, F.",
+      "verification_strategy": "Locate risk class cutoffs and labels mapping.",
+      "search_queries": [
+        "risk",
+        "segmentation",
+        "10",
+        "classes"
+      ],
+      "expected_evidence": "Cutoff file (e.g., risk_class_cutoffs_v1.0.0.pkl) or table mapping scores/PD to AA\u2013F."
+    },
+    {
+      "id": "claim_44",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Training set comprises 2007\u20132013 vintages (~80% of historical data).",
+      "verification_strategy": "Verify vintage filters and split proportions in training code.",
+      "search_queries": [
+        "training",
+        "2007-2013",
+        "vintages",
+        "80%"
+      ],
+      "expected_evidence": "Data split logs showing 2007\u20132013 in train and ~80% share."
+    },
+    {
+      "id": "claim_45",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Test set comprises 2014 vintage (~20% of historical data).",
+      "verification_strategy": "Confirm 2014 is held out as test with ~20% size.",
+      "search_queries": [
+        "test",
+        "2014",
+        "vintage",
+        "20%"
+      ],
+      "expected_evidence": "Split metadata or logs allocating 2014 to test."
+    },
+    {
+      "id": "claim_46",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Monitoring set uses 2015 vintages for post-development validation.",
+      "verification_strategy": "Check monitoring configuration referencing 2015 vintages.",
+      "search_queries": [
+        "monitoring",
+        "2015",
+        "vintages",
+        "validation"
+      ],
+      "expected_evidence": "Monitoring notebook evaluating 2015 outcomes."
+    },
+    {
+      "id": "claim_47",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "Class imbalance is addressed through stratified sampling preserving the natural default rate.",
+      "verification_strategy": "Inspect train split code for stratification on target.",
+      "search_queries": [
+        "class",
+        "imbalance",
+        "stratified",
+        "sampling"
+      ],
+      "expected_evidence": "Use of stratified split preserving default share."
+    },
+    {
+      "id": "claim_48",
+      "category": "methodology_pd",
+      "claim_type": "methodology_pd_model",
+      "description": "PD is modeled in log-odds form with standard logistic regression assumptions.",
+      "verification_strategy": "Review model specification and diagnostics for logistic assumptions.",
+      "search_queries": [
+        "log-odds",
+        "logistic",
+        "assumptions",
+        "PD"
+      ],
+      "expected_evidence": "Documentation or code comments noting log-odds formulation and assumption checks."
+    },
+    {
+      "id": "claim_49",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "EAD model estimates expected outstanding balance at time of default for approved loans.",
+      "verification_strategy": "Review EAD training/scoring code to confirm EAD is defined as expected outstanding at default for approved loans.",
+      "search_queries": [
+        "EAD",
+        "estimates",
+        "outstanding",
+        "default"
+      ],
+      "expected_evidence": "Notebook or module that computes outstanding-at-default for approved loans."
+    },
+    {
+      "id": "claim_50",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "EAD is expressed as Credit Conversion Factor (CCF) relative to funded amount.",
+      "verification_strategy": "Check EAD component where CCF is defined as proportion of funded amount.",
+      "search_queries": [
+        "EAD",
+        "Credit",
+        "Conversion",
+        "Factor"
+      ],
+      "expected_evidence": "Code/comments mapping EAD to CCF \u00d7 funded_amount."
+    },
+    {
+      "id": "claim_51",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "CCF is defined as outstanding at default divided by funded amount.",
+      "verification_strategy": "Inspect target construction for CCF = outstanding_at_default / funded_amount.",
+      "search_queries": [
+        "CCF",
+        "defined",
+        "outstanding",
+        "funded"
+      ],
+      "expected_evidence": "Function or formula implementing the CCF ratio."
+    },
+    {
+      "id": "claim_52",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Objective is to predict CCF at application time so that EAD = CCF \u00d7 funded amount.",
+      "verification_strategy": "Verify model predicts CCF using application-time inputs and multiplies by funded amount.",
+      "search_queries": [
+        "predict",
+        "CCF",
+        "application",
+        "EAD"
+      ],
+      "expected_evidence": "Pipeline that outputs predicted CCF and computes EAD = CCF \u00d7 funded_amount."
+    },
+    {
+      "id": "claim_53",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Modeling population consists of charged-off (defaulted) loans with observable default-time outstanding.",
+      "verification_strategy": "Confirm training dataset is filtered to charged-off defaults with valid outstanding at default.",
+      "search_queries": [
+        "modeling",
+        "population",
+        "charged-off",
+        "defaulted"
+      ],
+      "expected_evidence": "Data filter/query limiting to defaulted loans with observed outstanding."
+    },
+    {
+      "id": "claim_54",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Target label is the observed CCF on defaulted loans; non-defaulted loans are not used for EAD regression.",
+      "verification_strategy": "Check that only defaulted loans contribute targets and non-defaults are excluded.",
+      "search_queries": [
+        "Target",
+        "observed",
+        "CCF",
+        "defaulted"
+      ],
+      "expected_evidence": "Label creation code using defaulted-loan CCF only."
+    },
+    {
+      "id": "claim_55",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Algorithm is linear regression on CCF.",
+      "verification_strategy": "Inspect estimator to confirm linear regression with CCF as target.",
+      "search_queries": [
+        "Algorithm",
+        "linear",
+        "regression",
+        "CCF"
+      ],
+      "expected_evidence": "Model fit call for linear regression on CCF."
+    },
+    {
+      "id": "claim_56",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Predicted CCF values are clipped to [0, 1].",
+      "verification_strategy": "Look for post-processing step that clips predictions to [0,1].",
+      "search_queries": [
+        "Predicted",
+        "CCF",
+        "clipped",
+        "[0, 1]"
+      ],
+      "expected_evidence": "Code that bounds CCF predictions within 0 and 1."
+    },
+    {
+      "id": "claim_57",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Only application-time variables are used.",
+      "verification_strategy": "Verify feature list excludes post-origination data for EAD.",
+      "search_queries": [
+        "application-time",
+        "variables",
+        "used",
+        "only"
+      ],
+      "expected_evidence": "Feature schema limited to application-time inputs."
+    },
+    {
+      "id": "claim_58",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Categorical variables use one-hot encoding with dropped reference levels.",
+      "verification_strategy": "Inspect preprocessing for one-hot with reference drop.",
+      "search_queries": [
+        "Categorical",
+        "one-hot",
+        "reference",
+        "drop"
+      ],
+      "expected_evidence": "Transformer implementing OHE with a dropped category."
+    },
+    {
+      "id": "claim_59",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Ordinal variables use ordinal encoding.",
+      "verification_strategy": "Check pipeline for ordinal encoder on ordered factors.",
+      "search_queries": [
+        "Ordinal",
+        "variables",
+        "ordinal",
+        "encoding"
+      ],
+      "expected_evidence": "Config/stage applying ordinal encoding."
+    },
+    {
+      "id": "claim_60",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Continuous variables use native numeric form with z-score scaling.",
+      "verification_strategy": "Verify continuous features are standardized via z-score.",
+      "search_queries": [
+        "Continuous",
+        "z-score",
+        "scaling",
+        "numeric"
+      ],
+      "expected_evidence": "StandardScaler (or equivalent) on continuous variables."
+    },
+    {
+      "id": "claim_61",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Missingness is handled via median imputation plus missing indicators where predictive.",
+      "verification_strategy": "Inspect imputation strategy and presence of missingness indicator features.",
+      "search_queries": [
+        "Missingness",
+        "median",
+        "imputation",
+        "indicators"
+      ],
+      "expected_evidence": "Imputer + binary indicators for missing values."
+    },
+    {
+      "id": "claim_62",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Train-test split mirrors PD: training vintages 2007\u20132013, test 2014, monitoring 2015.",
+      "verification_strategy": "Confirm vintage-based split identical to PD for train/test/monitor.",
+      "search_queries": [
+        "Train-test",
+        "split",
+        "2007\u20132013",
+        "2014"
+      ],
+      "expected_evidence": "Split configuration assigning vintages as described."
+    },
+    {
+      "id": "claim_63",
+      "category": "methodology_ead",
+      "claim_type": "methodology_ead_model",
+      "description": "Sampling uses defaulted-loan subset only; no synthetic reweighting.",
+      "verification_strategy": "Check sampling code for default-only training and absence of reweighting.",
+      "search_queries": [
+        "Sampling",
+        "defaulted-loan",
+        "subset",
+        "no synthetic"
+      ],
+      "expected_evidence": "Sampling logic restricting to defaults with no class weights."
+    },
+    {
+      "id": "claim_64",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "LGD model estimates fraction of exposure not recovered after default.",
+      "verification_strategy": "Inspect LGD definition as 1 \u2212 recovery_rate over exposure at default.",
+      "search_queries": [
+        "LGD",
+        "fraction",
+        "not",
+        "recovered"
+      ],
+      "expected_evidence": "Computation of LGD from recovery metrics."
+    },
+    {
+      "id": "claim_65",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Repo models Recovery Rate first and derives LGD as 1 \u2212 Recovery Rate.",
+      "verification_strategy": "Verify two-step approach: recovery rate modeling precedes LGD derivation.",
+      "search_queries": [
+        "Recovery",
+        "Rate",
+        "derives",
+        "LGD"
+      ],
+      "expected_evidence": "Code modeling recovery_rate then computing LGD = 1 \u2212 recovery_rate."
+    },
+    {
+      "id": "claim_66",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Approach is two-stage (hurdle) model to handle spike at zero recoveries.",
+      "verification_strategy": "Confirm hurdle setup: Stage 1 incidence, Stage 2 magnitude.",
+      "search_queries": [
+        "two-stage",
+        "hurdle",
+        "zero",
+        "recoveries"
+      ],
+      "expected_evidence": "Separate models for incidence and conditional amount."
+    },
+    {
+      "id": "claim_67",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Recovery Rate is modeled as recoveries divided by funded amount on defaulted loans.",
+      "verification_strategy": "Check target creation for recovery_rate = recoveries / funded_amount on defaults.",
+      "search_queries": [
+        "Recovery",
+        "Rate",
+        "recoveries",
+        "funded"
+      ],
+      "expected_evidence": "Target formula computing recovery_rate from data."
+    },
+    {
+      "id": "claim_68",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "LGD = 1 \u2212 Recovery Rate.",
+      "verification_strategy": "Verify post-processing computes LGD from recovery rate.",
+      "search_queries": [
+        "LGD",
+        "1",
+        "Recovery",
+        "Rate"
+      ],
+      "expected_evidence": "Code setting LGD to 1 \u2212 recovery_rate."
+    },
+    {
+      "id": "claim_69",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Modeling population is defaulted (charged-off) loans only.",
+      "verification_strategy": "Confirm dataset for LGD includes only defaults/charged-off loans.",
+      "search_queries": [
+        "Modeling",
+        "population",
+        "defaulted",
+        "charged-off"
+      ],
+      "expected_evidence": "Data filter constraining to defaulted loans."
+    },
+    {
+      "id": "claim_70",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Stage 1 target is binary indicator of positive recovery (recovery_rate > 0).",
+      "verification_strategy": "Inspect Stage 1 label creation for recovery_rate > 0.",
+      "search_queries": [
+        "Stage",
+        "binary",
+        "positive",
+        "recovery"
+      ],
+      "expected_evidence": "Binary target column indicating positive recovery."
+    },
+    {
+      "id": "claim_71",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Stage 2 target is continuous recovery rate conditional on positive recovery.",
+      "verification_strategy": "Confirm Stage 2 trains on subset with recovery_rate > 0 using continuous target.",
+      "search_queries": [
+        "Stage",
+        "continuous",
+        "recovery",
+        "conditional"
+      ],
+      "expected_evidence": "Regression setup on positive-recovery subset."
+    },
+    {
+      "id": "claim_72",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Non-defaulted loans are not used to fit LGD model.",
+      "verification_strategy": "Verify exclusion of non-defaults from LGD training data.",
+      "search_queries": [
+        "Non-defaulted",
+        "not",
+        "used",
+        "LGD"
+      ],
+      "expected_evidence": "Filter logic excluding non-defaults."
+    },
+    {
+      "id": "claim_73",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Stage 1 model is logistic regression for recovery incidence.",
+      "verification_strategy": "Check estimator for logistic regression in Stage 1.",
+      "search_queries": [
+        "logistic",
+        "regression",
+        "recovery",
+        "incidence"
+      ],
+      "expected_evidence": "Model fit call for logistic regression."
+    },
+    {
+      "id": "claim_74",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Stage 2 model is linear regression on positives for recovery magnitude.",
+      "verification_strategy": "Confirm Stage 2 uses linear regression fitted on positive recoveries.",
+      "search_queries": [
+        "linear",
+        "regression",
+        "recovery",
+        "magnitude"
+      ],
+      "expected_evidence": "Model fit call for linear regression on positive subset."
+    },
+    {
+      "id": "claim_75",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Unconditional expected recovery = P(recovery>0) \u00d7 E(recovery_rate | recovery>0).",
+      "verification_strategy": "Inspect aggregation combining Stage 1 probability and Stage 2 expected value.",
+      "search_queries": [
+        "Unconditional",
+        "expected",
+        "recovery",
+        "E()"
+      ],
+      "expected_evidence": "Computation multiplying incidence probability by conditional mean."
+    },
+    {
+      "id": "claim_76",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Predicted LGD is 1 \u2212 unconditional expected recovery.",
+      "verification_strategy": "Verify final LGD = 1 \u2212 (P \u00d7 E[recovery_rate|positive]).",
+      "search_queries": [
+        "Predicted",
+        "LGD",
+        "unconditional",
+        "recovery"
+      ],
+      "expected_evidence": "Final calculation deriving LGD from unconditional expected recovery."
+    },
+    {
+      "id": "claim_77",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Predicted rates are typically clipped to [0, 1] for numerical safety.",
+      "verification_strategy": "Confirm clipping of predicted recovery/LGD within [0,1].",
+      "search_queries": [
+        "Predicted",
+        "rates",
+        "clipped",
+        "[0, 1]"
+      ],
+      "expected_evidence": "Post-processing bound checks in code."
+    },
+    {
+      "id": "claim_78",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Feature engineering mirrors EAD: application-time variables, one-hot/ordinal encoding, z-score scaling, median imputation and missing indicators.",
+      "verification_strategy": "Compare LGD preprocessors to EAD pipeline for identical encoders/imputers.",
+      "search_queries": [
+        "Feature",
+        "engineering",
+        "mirrors",
+        "EAD"
+      ],
+      "expected_evidence": "Shared preprocessing components between EAD and LGD."
+    },
+    {
+      "id": "claim_79",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Out-of-time split mirrors PD/EAD: train 2007\u20132013, test 2014, monitor 2015 defaulted subset.",
+      "verification_strategy": "Check LGD data split configuration aligns with PD/EAD splits.",
+      "search_queries": [
+        "Out-of-time",
+        "split",
+        "2014",
+        "2015"
+      ],
+      "expected_evidence": "Split config applying vintages as stated."
+    },
+    {
+      "id": "claim_80",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Sampling involves no synthetic reweighting; stage 2 trained on positive-recovery defaults only.",
+      "verification_strategy": "Verify no class weights/SMOTE and Stage 2 uses only positive recoveries.",
+      "search_queries": [
+        "Sampling",
+        "no",
+        "synthetic",
+        "positive"
+      ],
+      "expected_evidence": "Training code without reweighting and with positive-only subset for Stage 2."
+    },
+    {
+      "id": "claim_81",
+      "category": "methodology_lgd",
+      "claim_type": "methodology_lgd_model",
+      "description": "Primary LGD performance metric is Mean Absolute Error (MAE) on unconditional recovery rate.",
+      "verification_strategy": "Inspect evaluation metrics emphasizing MAE on unconditional recovery.",
+      "search_queries": [
+        "LGD",
+        "performance",
+        "MAE",
+        "unconditional"
+      ],
+      "expected_evidence": "Evaluation report with MAE computed on unconditional recovery."
+    },
+    {
+      "id": "claim_82",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "Primary data source is Lending Club Historical Loan Performance Data from LendingClub Marketplace Platform.",
+      "verification_strategy": "Check data loaders/catalog for LendingClub historical performance files.",
+      "search_queries": [
+        "Primary",
+        "data",
+        "LendingClub",
+        "Performance"
+      ],
+      "expected_evidence": "ETL scripts or paths pointing to LendingClub historical datasets."
+    },
+    {
+      "id": "claim_83",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "Historical period is January 2007 to December 2015.",
+      "verification_strategy": "Validate min/max dates in the dataset align with 2007\u20132015.",
+      "search_queries": [
+        "Historical",
+        "period",
+        "2007",
+        "2015"
+      ],
+      "expected_evidence": "Summary showing coverage from 2007-01 to 2015-12."
+    },
+    {
+      "id": "claim_84",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "Observation type is originated loans with complete application and outcome data.",
+      "verification_strategy": "Confirm filters to originated loans and completeness checks on outcomes.",
+      "search_queries": [
+        "Observation",
+        "originated",
+        "complete",
+        "outcome"
+      ],
+      "expected_evidence": "Data filters ensuring originations and complete outcomes."
+    },
+    {
+      "id": "claim_85",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "Dataset is static historical with no ongoing hydration.",
+      "verification_strategy": "Review pipeline/docs for absence of periodic refresh tasks.",
+      "search_queries": [
+        "Dataset",
+        "static",
+        "historical",
+        "hydration"
+      ],
+      "expected_evidence": "Documentation noting one-time historical snapshot."
+    },
+    {
+      "id": "claim_86",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "No PII is included in model development.",
+      "verification_strategy": "Scan schema for absence of PII columns; check privacy checklist.",
+      "search_queries": [
+        "No",
+        "PII",
+        "model",
+        "development"
+      ],
+      "expected_evidence": "Data dictionary and approvals indicating no PII used."
+    },
+    {
+      "id": "claim_87",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "Development approach uses out-of-time validation: train 2007\u20132013 (~373k, 80%), test 2014 (~93k, 20%), monitor 2015 (~421k).",
+      "verification_strategy": "Verify split sizes and vintage allocations match counts and percentages.",
+      "search_queries": [
+        "out-of-time",
+        "validation",
+        "373k",
+        "421k"
+      ],
+      "expected_evidence": "Split summary with counts ~373k/93k/421k and vintages."
+    },
+    {
+      "id": "claim_88",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "PD target variable 'default' is binary with 0 = Default and 1 = Non-default, defined as Charged Off OR Late (31\u2013120 days) OR Default.",
+      "verification_strategy": "Inspect PD label logic for encoded polarity and status mapping.",
+      "search_queries": [
+        "PD",
+        "target",
+        "binary",
+        "Default"
+      ],
+      "expected_evidence": "Labeling code mapping statuses and setting 0/1 as described."
+    },
+    {
+      "id": "claim_89",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "LGD target 'recovery_rate' is recoveries divided by funded amount on defaulted loans.",
+      "verification_strategy": "Check LGD target derivation using recoveries and funded amount.",
+      "search_queries": [
+        "LGD",
+        "target",
+        "recovery_rate",
+        "funded"
+      ],
+      "expected_evidence": "Target construction cell for recovery_rate = recoveries/funded_amount."
+    },
+    {
+      "id": "claim_90",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "EAD target 'ccf' is outstanding divided by funded amount at default.",
+      "verification_strategy": "Confirm CCF target equals outstanding_at_default / funded_amount.",
+      "search_queries": [
+        "EAD",
+        "target",
+        "ccf",
+        "outstanding"
+      ],
+      "expected_evidence": "Computation of ccf from outstanding and funded amount at default."
+    },
+    {
+      "id": "claim_91",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "Feature sets include loan characteristics, borrower characteristics, credit bureau variables, and derived variables, all at application time.",
+      "verification_strategy": "Review feature catalog to ensure categories and application-time timing.",
+      "search_queries": [
+        "Feature",
+        "loan",
+        "borrower",
+        "bureau"
+      ],
+      "expected_evidence": "Feature list grouped by loan/borrower/bureau/derived at application time."
+    },
+    {
+      "id": "claim_92",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "Post-origination variables and high-missingness variables (>70%) are excluded.",
+      "verification_strategy": "Check exclusion rules for post-origination and >70% missing features.",
+      "search_queries": [
+        "Post-origination",
+        "excluded",
+        "missingness",
+        ">70%"
+      ],
+      "expected_evidence": "Filtering logic or data dictionary marking exclusions."
+    },
+    {
+      "id": "claim_93",
+      "category": "data_specifications",
+      "claim_type": "data_specification",
+      "description": "Data quality is described as high, with completeness checks, logical validation, and handling of outliers and missing data.",
+      "verification_strategy": "Inspect data QA steps for completeness, logical checks, and outlier/missing handling.",
+      "search_queries": [
+        "Data",
+        "quality",
+        "completeness",
+        "outliers"
+      ],
+      "expected_evidence": "QA notebook or checklist covering these controls."
+    },
+    {
+      "id": "claim_94",
+      "category": "model_performance_pd",
+      "claim_type": "performance_metric_pd",
+      "description": "Discrimination metrics (AUC, Gini, KS) for PD model on train and test sets are placeholders [TO BE ADDED] but benchmark expectations are AUC > 0.65, Gini > 0.30, KS > 0.25.",
+      "verification_strategy": "Locate evaluation notebook; recompute AUC/Gini/KS on train/test and compare to benchmark thresholds.",
+      "search_queries": [
+        "Discrimination",
+        "AUC",
+        "Gini",
+        "KS"
+      ],
+      "expected_evidence": "Metric tables/plots showing AUC, Gini, KS values and thresholds."
+    },
+    {
+      "id": "claim_95",
+      "category": "model_performance_pd",
+      "claim_type": "performance_metric_pd",
+      "description": "Classification metrics (accuracy, precision, recall, specificity, F1) are marked [TO BE ADDED] for test set.",
+      "verification_strategy": "Check confusion-matrix and derived metrics on the test set.",
+      "search_queries": [
+        "Classification",
+        "precision",
+        "recall",
+        "F1"
+      ],
+      "expected_evidence": "Test-set metrics table with accuracy/precision/recall/specificity/F1."
+    },
+    {
+      "id": "claim_96",
+      "category": "model_performance_pd",
+      "claim_type": "performance_metric_pd",
+      "description": "Calibration metrics (Hosmer-Lemeshow test, calibration slope, Brier score) are marked [TO BE ADDED] in section 5.1.",
+      "verification_strategy": "Reproduce calibration plots/tests and compute H-L, slope, and Brier score.",
+      "search_queries": [
+        "Calibration",
+        "Hosmer-Lemeshow",
+        "slope",
+        "Brier"
+      ],
+      "expected_evidence": "Calibration report with H-L p-values, slope, and Brier score."
+    },
+    {
+      "id": "claim_97",
+      "category": "model_performance_pd",
+      "claim_type": "performance_metric_pd",
+      "description": "Rank order by risk class is to be filled with TBD values for population %, default rate, average score, and observations.",
+      "verification_strategy": "Generate rank-order table by risk class and fill TBD fields.",
+      "search_queries": [
+        "Rank",
+        "order",
+        "risk",
+        "class"
+      ],
+      "expected_evidence": "Table with population share, default rate, avg score, and counts by class."
+    },
+    {
+      "id": "claim_98",
+      "category": "model_performance_pd",
+      "claim_type": "performance_metric_pd",
+      "description": "All retained PD variables are claimed significant at p \u2264 0.05.",
+      "verification_strategy": "Review model summary/statistical output to confirm retained features have p-values \u2264 0.05.",
+      "search_queries": [
+        "retained",
+        "variables",
+        "significant",
+        "0.05"
+      ],
+      "expected_evidence": "Stats output or selection log showing p-values \u2264 0.05 for retained variables."
+    },
+    {
+      "id": "claim_99",
+      "category": "model_performance_pd",
+      "claim_type": "performance_metric_pd",
+      "description": "Most influential PD drivers are sub_grade, DTI bins, interest rate bins, inquiry count, and delinquency history.",
+      "verification_strategy": "Inspect feature importance or coefficient tables and any SHAP/WOE summaries to confirm listed top drivers.",
+      "search_queries": [
+        "PD",
+        "drivers",
+        "sub_grade",
+        "DTI"
+      ],
+      "expected_evidence": "Model summary or analysis ranking sub_grade, DTI, rate bins, inquiries, and delinquencies as most influential."
+    },
+    {
+      "id": "claim_100",
+      "category": "model_performance_pd",
+      "claim_type": "performance_metric_pd",
+      "description": "Elsewhere in the document, test set PD AUC is cited as 0.688 and is characterized as acceptable but not exceptional.",
+      "verification_strategy": "Locate the citation of 0.688 AUC in the report; recompute test AUC and compare to confirm characterization.",
+      "search_queries": [
+        "PD",
+        "AUC",
+        "0.688",
+        "test"
+      ],
+      "expected_evidence": "Metric table/plot reporting test AUC \u2248 0.688 plus commentary describing it as acceptable."
+    },
+    {
+      "id": "claim_101",
+      "category": "model_performance_lgd",
+      "claim_type": "performance_metric_lgd",
+      "description": "LGD regression metrics (MAE, RMSE, R-squared) on train and test are placeholders [TO BE ADDED] in section 5.2.",
+      "verification_strategy": "Open the LGD evaluation notebook/section 5.2 and compute MAE, RMSE, and R\u00b2 on train/test.",
+      "search_queries": [
+        "LGD",
+        "MAE",
+        "RMSE",
+        "R-squared"
+      ],
+      "expected_evidence": "Completed results table with MAE, RMSE, and R\u00b2 for train and test."
+    },
+    {
+      "id": "claim_102",
+      "category": "model_performance_lgd",
+      "claim_type": "performance_metric_lgd",
+      "description": "Combined two-stage LGD performance claims: mean predicted recovery rate is 18.2% (train) and 17.9% (test); actual mean recovery rate is 19.1% (train) and 18.4% (test).",
+      "verification_strategy": "Aggregate predicted and actual recovery rates across train/test and verify reported percentages.",
+      "search_queries": [
+        "LGD",
+        "recovery",
+        "18.2%",
+        "17.9%"
+      ],
+      "expected_evidence": "Summary table computing mean predicted vs. actual recovery rates matching ~18.2/17.9% predicted and 19.1/18.4% actual."
+    },
+    {
+      "id": "claim_103",
+      "category": "model_performance_lgd",
+      "claim_type": "performance_metric_lgd",
+      "description": "Predicted vs actual recovery rate correlation is 0.428 (train) and 0.417 (test).",
+      "verification_strategy": "Compute Pearson correlation between predicted and actual recovery rates for train and test.",
+      "search_queries": [
+        "LGD",
+        "correlation",
+        "0.428",
+        "0.417"
+      ],
+      "expected_evidence": "Correlation results approximating 0.428 (train) and 0.417 (test)."
+    },
+    {
+      "id": "claim_104",
+      "category": "model_performance_lgd",
+      "claim_type": "performance_metric_lgd",
+      "description": "Key LGD drivers: loan grade/sub-grade, interest rate, loan amount, DTI ratio.",
+      "verification_strategy": "Review Stage 1/Stage 2 coefficients or feature importance to confirm listed variables rank highly.",
+      "search_queries": [
+        "LGD",
+        "drivers",
+        "grade",
+        "DTI"
+      ],
+      "expected_evidence": "Coefficient/importances showing grade/sub-grade, rate, amount, and DTI as key drivers."
+    },
+    {
+      "id": "claim_105",
+      "category": "model_performance_lgd",
+      "claim_type": "performance_metric_lgd",
+      "description": "LGD R\u00b2 is later stated as 0.174, indicating substantial unexplained variance.",
+      "verification_strategy": "Calculate R\u00b2 for the LGD continuous stage (or overall recovery rate) on test and verify ~0.174.",
+      "search_queries": [
+        "LGD",
+        "R\u00b2",
+        "0.174",
+        "variance"
+      ],
+      "expected_evidence": "Metrics table or printout reporting R\u00b2 \u2248 0.174 for LGD."
+    },
+    {
+      "id": "claim_106",
+      "category": "model_performance_ead",
+      "claim_type": "performance_metric_ead",
+      "description": "EAD regression metrics (MAE, RMSE, R-squared) are placeholders [TO BE ADDED] in section 5.3.",
+      "verification_strategy": "Run EAD evaluation to produce MAE, RMSE, and R\u00b2 on the designated splits.",
+      "search_queries": [
+        "EAD",
+        "MAE",
+        "RMSE",
+        "R-squared"
+      ],
+      "expected_evidence": "Completed EAD metrics table for train/test."
+    },
+    {
+      "id": "claim_107",
+      "category": "model_performance_ead",
+      "claim_type": "performance_metric_ead",
+      "description": "Distributional stats for CCF (mean, median, std, 25th, 75th percentiles) are placeholders [TO BE ADDED] in section 5.3.",
+      "verification_strategy": "Compute descriptive statistics for observed and predicted CCF and populate the placeholders.",
+      "search_queries": [
+        "CCF",
+        "mean",
+        "median",
+        "percentiles"
+      ],
+      "expected_evidence": "Descriptive stats table for CCF including mean, median, std, and quartiles."
+    },
+    {
+      "id": "claim_108",
+      "category": "model_performance_ead",
+      "claim_type": "performance_metric_ead",
+      "description": "Text claims that most defaults occur when balance is still high with median CCF around 93%.",
+      "verification_strategy": "Plot CCF distribution for defaults and confirm that the median is near 0.93.",
+      "search_queries": [
+        "median",
+        "CCF",
+        "0.93",
+        "defaults"
+      ],
+      "expected_evidence": "Histogram/summary showing median CCF \u2248 0.93 for defaulted loans."
+    },
+    {
+      "id": "claim_109",
+      "category": "model_performance_ead",
+      "claim_type": "performance_metric_ead",
+      "description": "36-month term loans show CCF ~0.88 vs. 60-month ~0.84.",
+      "verification_strategy": "Group CCF by term length and compute mean/median for 36 vs 60 months.",
+      "search_queries": [
+        "36-month",
+        "60-month",
+        "CCF",
+        "0.88"
+      ],
+      "expected_evidence": "Grouped stats indicating ~0.88 for 36-month and ~0.84 for 60-month loans."
+    },
+    {
+      "id": "claim_110",
+      "category": "model_performance_ead",
+      "claim_type": "performance_metric_ead",
+      "description": "Lower credit grades default earlier in life and therefore have higher CCF.",
+      "verification_strategy": "Analyze CCF by credit grade and loan age at default to verify higher CCF for lower grades.",
+      "search_queries": [
+        "lower",
+        "grades",
+        "higher",
+        "CCF"
+      ],
+      "expected_evidence": "Stratified table/plot showing increasing CCF as grade worsens."
+    },
+    {
+      "id": "claim_111",
+      "category": "model_performance_ead",
+      "claim_type": "performance_metric_ead",
+      "description": "EAD R\u00b2 is later stated as 0.232, showing limited ability to predict outstanding balance at default.",
+      "verification_strategy": "Compute R\u00b2 of the EAD (CCF) regression on test and confirm ~0.232.",
+      "search_queries": [
+        "EAD",
+        "R\u00b2",
+        "0.232",
+        "predict"
+      ],
+      "expected_evidence": "Results table reporting R\u00b2 \u2248 0.232 for EAD."
+    },
+    {
+      "id": "claim_112",
+      "category": "model_performance_integrated_el",
+      "claim_type": "performance_metric_el",
+      "description": "On 2014 test set, actual portfolio default rate is 14.7% and predicted is 14.2% (ratio 0.97).",
+      "verification_strategy": "Aggregate outcomes and predictions for 2014 test to compute actual vs predicted default rate and their ratio.",
+      "search_queries": [
+        "2014",
+        "default",
+        "14.7%",
+        "14.2%"
+      ],
+      "expected_evidence": "Portfolio-level table showing actual \u224814.7% and predicted \u224814.2% with ratio ~0.97."
+    },
+    {
+      "id": "claim_113",
+      "category": "model_performance_integrated_el",
+      "claim_type": "performance_metric_el",
+      "description": "Portfolio mean LGD actual is 81.6%, predicted 81.9% (ratio 1.00).",
+      "verification_strategy": "Compute actual and predicted LGD means on 2014 test and the ratio.",
+      "search_queries": [
+        "LGD",
+        "81.6%",
+        "81.9%",
+        "ratio"
+      ],
+      "expected_evidence": "Summary indicating actual LGD \u224881.6% and predicted \u224881.9% with ratio ~1.00."
+    },
+    {
+      "id": "claim_114",
+      "category": "model_performance_integrated_el",
+      "claim_type": "performance_metric_el",
+      "description": "Portfolio mean CCF actual is 85.1%, predicted 84.8% (ratio 1.00).",
+      "verification_strategy": "Compute actual vs predicted CCF mean on the test set and compare.",
+      "search_queries": [
+        "CCF",
+        "85.1%",
+        "84.8%",
+        "ratio"
+      ],
+      "expected_evidence": "CCF means near 85.1% actual and 84.8% predicted with ratio ~1.00."
+    },
+    {
+      "id": "claim_115",
+      "category": "model_performance_integrated_el",
+      "claim_type": "performance_metric_el",
+      "description": "Portfolio EL rate actual is 10.21%, predicted 9.83% (ratio 0.96).",
+      "verification_strategy": "Compute EL rate (PD\u00d7LGD\u00d7EAD) per account and average; compare actual vs predicted.",
+      "search_queries": [
+        "EL",
+        "10.21%",
+        "9.83%",
+        "ratio"
+      ],
+      "expected_evidence": "EL rate table showing ~10.21% actual vs ~9.83% predicted (ratio ~0.96)."
+    },
+    {
+      "id": "claim_116",
+      "category": "model_performance_integrated_el",
+      "claim_type": "performance_metric_el",
+      "description": "Total expected loss actual is $816.5M, predicted $786.2M (ratio 0.96).",
+      "verification_strategy": "Sum EL dollars across accounts for actual vs predicted and compute ratio.",
+      "search_queries": [
+        "expected",
+        "loss",
+        "$816.5M",
+        "$786.2M"
+      ],
+      "expected_evidence": "Portfolio EL dollars near $816.5M actual and $786.2M predicted (ratio ~0.96)."
+    },
+    {
+      "id": "claim_117",
+      "category": "model_performance_integrated_el",
+      "claim_type": "performance_metric_el",
+      "description": "Top 20% riskiest accounts by EL contain 52% of total predicted loss.",
+      "verification_strategy": "Sort by predicted EL, compute cumulative share; confirm top 20% accounts hold ~52% of predicted loss.",
+      "search_queries": [
+        "top",
+        "20%",
+        "52%",
+        "predicted"
+      ],
+      "expected_evidence": "Lift/cumulative gains chart or table with ~52% in top quintile."
+    },
+    {
+      "id": "claim_118",
+      "category": "model_performance_integrated_el",
+      "claim_type": "performance_metric_el",
+      "description": "Bottom 40% of risk distribution contains only 8% of total predicted loss.",
+      "verification_strategy": "Compute cumulative distribution from the bottom 40% and verify share \u22488%.",
+      "search_queries": [
+        "bottom",
+        "40%",
+        "8%",
+        "loss"
+      ],
+      "expected_evidence": "Cumulative table/plot showing ~8% share for bottom 40% of accounts."
+    },
+    {
+      "id": "claim_119",
+      "category": "model_performance_integrated_el",
+      "claim_type": "performance_metric_el",
+      "description": "Model is claimed to show clear risk separation and support risk-based pricing and capital allocation.",
+      "verification_strategy": "Review rank-order and lift charts plus documentation linking outputs to pricing/capital use cases.",
+      "search_queries": [
+        "risk",
+        "separation",
+        "pricing",
+        "capital"
+      ],
+      "expected_evidence": "Evidence of monotonic loss by bands and references to pricing/capital frameworks."
+    },
+    {
+      "id": "claim_120",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_metric",
+      "description": "Out-of-time PD AUC is 0.688 on 2014 test and 0.682 on 2015 monitoring, a decline of 0.6 points.",
+      "verification_strategy": "Recompute AUC for 2014 test and 2015 monitoring and compare values and deltas.",
+      "search_queries": [
+        "PD",
+        "AUC",
+        "2014",
+        "2015"
+      ],
+      "expected_evidence": "Backtest results listing AUC \u22480.688 (2014) and \u22480.682 (2015)."
+    },
+    {
+      "id": "claim_121",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_metric",
+      "description": "LGD MAE increases from 0.152 to 0.159 (+0.7 pts) between 2014 test and 2015 monitoring.",
+      "verification_strategy": "Compute LGD MAE for 2014 vs 2015 backtest samples and confirm increase ~0.007.",
+      "search_queries": [
+        "LGD",
+        "MAE",
+        "0.152",
+        "0.159"
+      ],
+      "expected_evidence": "MAE table indicating ~0.152 (2014) vs ~0.159 (2015)."
+    },
+    {
+      "id": "claim_122",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_metric",
+      "description": "EAD MAE increases from 0.097 to 0.101 (+0.4 pts) between 2014 test and 2015 monitoring.",
+      "verification_strategy": "Compute EAD (CCF) MAE for both periods and validate the rise of ~0.004.",
+      "search_queries": [
+        "EAD",
+        "MAE",
+        "0.097",
+        "0.101"
+      ],
+      "expected_evidence": "MAE table indicating ~0.097 (2014) vs ~0.101 (2015)."
+    },
+    {
+      "id": "claim_123",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_metric",
+      "description": "Portfolio EL predicted increases from 9.83% to 10.12% (+29 bps) between 2014 test and 2015 monitoring.",
+      "verification_strategy": "Aggregate predicted EL rates by period and compare change in basis points.",
+      "search_queries": [
+        "EL",
+        "predicted",
+        "9.83%",
+        "10.12%"
+      ],
+      "expected_evidence": "Backtest table showing predicted EL \u22489.83% (2014) vs \u224810.12% (2015)."
+    },
+    {
+      "id": "claim_124",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_metric",
+      "description": "Portfolio EL actual increases from 10.21% to 10.58% (+37 bps).",
+      "verification_strategy": "Compute actual EL rates by period and confirm ~37 bps increase.",
+      "search_queries": [
+        "EL",
+        "actual",
+        "10.21%",
+        "10.58%"
+      ],
+      "expected_evidence": "Actual EL \u224810.21% (2014) vs \u224810.58% (2015)."
+    },
+    {
+      "id": "claim_125",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_metric",
+      "description": "Prediction error is \u22120.38% in 2014 and \u22120.46% in 2015 (difference \u22128 bps).",
+      "verification_strategy": "Compute predicted\u2212actual EL for each period and compare.",
+      "search_queries": [
+        "prediction",
+        "error",
+        "\u22120.38%",
+        "\u22120.46%"
+      ],
+      "expected_evidence": "Error table with \u22120.38% (2014) and \u22120.46% (2015)."
+    },
+    {
+      "id": "claim_126",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_assessment",
+      "description": "Stability assessment concludes performance degradation is acceptable and consistent with slightly adverse credit conditions.",
+      "verification_strategy": "Review backtest narrative/conclusion and any macro context discussing acceptability.",
+      "search_queries": [
+        "stability",
+        "acceptable",
+        "degradation",
+        "adverse"
+      ],
+      "expected_evidence": "Narrative stating degradation is acceptable and linked to credit conditions."
+    },
+    {
+      "id": "claim_127",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_segment",
+      "description": "Segment-level backtesting shows small business loans have higher prediction error (1.2%) than other purposes (0.3\u20130.5%).",
+      "verification_strategy": "Generate backtest errors by loan purpose and verify small business at ~1.2% vs others ~0.3\u20130.5%.",
+      "search_queries": [
+        "segment",
+        "small",
+        "business",
+        "1.2%"
+      ],
+      "expected_evidence": "Segmented error table highlighting higher error for small business loans."
+    },
+    {
+      "id": "claim_128",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_segment",
+      "description": "Geographic segment performance is broadly stable with higher error in 'Other' region due to smaller samples.",
+      "verification_strategy": "Review error by geography and sample sizes; confirm 'Other' shows higher variance/error.",
+      "search_queries": [
+        "geographic",
+        "stable",
+        "Other",
+        "samples"
+      ],
+      "expected_evidence": "Geo-segment table with relatively higher error for 'Other' and note on sample size."
+    },
+    {
+      "id": "claim_129",
+      "category": "model_performance_backtesting",
+      "claim_type": "backtesting_trend",
+      "description": "Quarterly drift in 2015 shows PD AUC declining from 0.685 to 0.679 and LGD/EAD MAE gradually increasing; EL error becomes slightly more negative.",
+      "verification_strategy": "Plot quarterly metrics in 2015 for PD AUC and LGD/EAD MAE; compute EL error trend.",
+      "search_queries": [
+        "quarterly",
+        "2015",
+        "AUC",
+        "drift"
+      ],
+      "expected_evidence": "Quarterly trend chart with AUC ~0.685\u21920.679 and gradual MAE increases; EL error more negative."
+    },
+    {
+      "id": "claim_130",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Economic environment is assumed broadly stationary relative to 2007\u20132014 training period.",
+      "verification_strategy": "Check assumptions section and ensure no macro regime-shift adjustments are embedded.",
+      "search_queries": [
+        "Economic",
+        "stationary",
+        "2007\u20132014",
+        "training"
+      ],
+      "expected_evidence": "Assumptions text citing stationarity relative to development period."
+    },
+    {
+      "id": "claim_131",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Model does not explicitly account for macroeconomic interest rate changes and was developed in a low-rate environment.",
+      "verification_strategy": "Confirm absence of rate/macro covariates and note development context.",
+      "search_queries": [
+        "macroeconomic",
+        "interest",
+        "low-rate",
+        "absent"
+      ],
+      "expected_evidence": "Documentation stating no explicit macro/interest rate features."
+    },
+    {
+      "id": "claim_132",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "No macroeconomic overlays are incorporated; model is point-in-time, not scenario-based.",
+      "verification_strategy": "Verify overlay framework not applied within model outputs; only potential external overlays.",
+      "search_queries": [
+        "macroeconomic",
+        "overlays",
+        "point-in-time",
+        "scenario"
+      ],
+      "expected_evidence": "Statement that overlays are not embedded; PIT design."
+    },
+    {
+      "id": "claim_133",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Target population of future applicants is assumed similar to historical LendingClub borrowers.",
+      "verification_strategy": "Review scope/assumptions for comparability to historical applicant base.",
+      "search_queries": [
+        "target",
+        "population",
+        "similar",
+        "historical"
+      ],
+      "expected_evidence": "Assumption text about similarity to LendingClub historical population."
+    },
+    {
+      "id": "claim_134",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Loan product features (36/60 months, unsecured) and underwriting processes are assumed stable.",
+      "verification_strategy": "Check for assumption of unchanged product specs and underwriting process.",
+      "search_queries": [
+        "36/60",
+        "unsecured",
+        "stable",
+        "underwriting"
+      ],
+      "expected_evidence": "Assumptions listing stable terms and processes."
+    },
+    {
+      "id": "claim_135",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Distribution channels remain online marketplace; performance may differ in other channels.",
+      "verification_strategy": "Confirm assumption of online channel and note limitations for other channels.",
+      "search_queries": [
+        "online",
+        "marketplace",
+        "channels",
+        "differ"
+      ],
+      "expected_evidence": "Text restricting applicability to online marketplace distribution."
+    },
+    {
+      "id": "claim_136",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Application-time data is assumed sufficient to capture key risk drivers.",
+      "verification_strategy": "Check that only application-time features are used and assumption acknowledges sufficiency.",
+      "search_queries": [
+        "application-time",
+        "sufficient",
+        "risk",
+        "drivers"
+      ],
+      "expected_evidence": "Assumption stating adequacy of application-time variables."
+    },
+    {
+      "id": "claim_137",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Default and recovery outcomes are assumed fully observed over sufficient seasoning periods.",
+      "verification_strategy": "Review data description for seasoning and completeness of outcomes.",
+      "search_queries": [
+        "outcomes",
+        "fully",
+        "observed",
+        "seasoning"
+      ],
+      "expected_evidence": "Note that defaults/recoveries are sufficiently seasoned and observed."
+    },
+    {
+      "id": "claim_138",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Self-reported fields such as income and employment are assumed reasonably accurate.",
+      "verification_strategy": "Identify self-reported fields and check any validation or caveats on their reliability.",
+      "search_queries": [
+        "self-reported",
+        "income",
+        "employment",
+        "accurate"
+      ],
+      "expected_evidence": "Assumptions acknowledging reliance on reasonably accurate self-reports."
+    },
+    {
+      "id": "claim_139",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "PD, LGD, and EAD are modeled separately, assuming correlations are captured through shared risk factors but joint distribution is not explicitly modeled.",
+      "verification_strategy": "Confirm separate modeling tracks and absence of explicit joint modeling.",
+      "search_queries": [
+        "modeled",
+        "separately",
+        "correlations",
+        "joint"
+      ],
+      "expected_evidence": "Architecture doc showing three separate models and no copula/joint model."
+    },
+    {
+      "id": "claim_140",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "EL = PD \u00d7 LGD \u00d7 EAD multiplicative structure is assumed appropriate.",
+      "verification_strategy": "Check formula usage and rationale for multiplicative combination.",
+      "search_queries": [
+        "EL",
+        "PD\u00d7LGD\u00d7EAD",
+        "multiplicative",
+        "structure"
+      ],
+      "expected_evidence": "Documentation/code computing EL by multiplying PD, LGD, EAD."
+    },
+    {
+      "id": "claim_141",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Logistic regression assumptions apply to PD: log-odds linearity in binned predictors, independence, no perfect multicollinearity.",
+      "verification_strategy": "Review PD binning and diagnostics addressing linearity and multicollinearity.",
+      "search_queries": [
+        "logistic",
+        "assumptions",
+        "linearity",
+        "multicollinearity"
+      ],
+      "expected_evidence": "Diagnostics or notes on PD model assumptions and checks."
+    },
+    {
+      "id": "claim_142",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Linear regression assumptions apply to LGD Stage 2 and EAD: linearity, homoscedasticity, normal errors, and no multicollinearity.",
+      "verification_strategy": "Check residual plots/tests and VIFs for LGD Stage 2 and EAD regressions.",
+      "search_queries": [
+        "linear",
+        "homoscedasticity",
+        "normal",
+        "VIF"
+      ],
+      "expected_evidence": "Residual diagnostics and multicollinearity checks for LGD/EAD."
+    },
+    {
+      "id": "claim_143",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Two-stage LGD assumes recovery incidence and magnitude can be modeled independently.",
+      "verification_strategy": "Review hurdle model rationale and any independence justification.",
+      "search_queries": [
+        "two-stage",
+        "incidence",
+        "magnitude",
+        "independent"
+      ],
+      "expected_evidence": "Methodology notes explaining separate incidence and magnitude models."
+    },
+    {
+      "id": "claim_144",
+      "category": "assumptions",
+      "claim_type": "assumption",
+      "description": "Model is a 12-month PD and does not model lifetime default directly.",
+      "verification_strategy": "Confirm PD horizon is 12 months and that lifetime default is not estimated within the PD model.",
+      "search_queries": [
+        "12-month",
+        "PD",
+        "lifetime",
+        "default"
+      ],
+      "expected_evidence": "Parameters or docs stating 12-month PD without lifetime modeling."
+    },
+    {
+      "id": "claim_145",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "Model is trained exclusively on 2007\u20132014 LendingClub data, which may not represent other lenders, products, channels, or post-2015 environments.",
+      "verification_strategy": "Verify training vintages and note external validity constraints.",
+      "search_queries": [
+        "trained",
+        "2007\u20132014",
+        "represent",
+        "post-2015"
+      ],
+      "expected_evidence": "Limitations section citing dataset/lender/product/channel representativeness issues."
+    },
+    {
+      "id": "claim_146",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "Only application-time features are used; behavioral and macro variables are not incorporated.",
+      "verification_strategy": "Review feature registry to confirm exclusion of behavior and macro variables.",
+      "search_queries": [
+        "application-time",
+        "behavioral",
+        "macro",
+        "excluded"
+      ],
+      "expected_evidence": "Feature list showing only application-time variables."
+    },
+    {
+      "id": "claim_147",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "A single model is used for all risk tiers; no separate models by prime vs subprime or by purpose.",
+      "verification_strategy": "Confirm absence of segmented PD/LGD/EAD models by tier or purpose.",
+      "search_queries": [
+        "single",
+        "model",
+        "prime",
+        "subprime"
+      ],
+      "expected_evidence": "Architecture indicating unified modeling approach without segmentation."
+    },
+    {
+      "id": "claim_148",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "Models are linear/logistic with binning; no non-linear or ensemble methods are used.",
+      "verification_strategy": "Inspect estimators used (logistic/linear) and absence of tree/ensemble kernels.",
+      "search_queries": [
+        "linear",
+        "logistic",
+        "binning",
+        "ensemble"
+      ],
+      "expected_evidence": "Training code showing logistic/linear models and no non-linear/ensemble algorithms."
+    },
+    {
+      "id": "claim_149",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "PD AUC of 0.688 is considered acceptable but not best-in-class.",
+      "verification_strategy": "Compare test AUC against industry benchmarks and commentary ranking; verify AUC=0.688 in evaluation output.",
+      "search_queries": [
+        "PD",
+        "AUC",
+        "0.688",
+        "benchmark"
+      ],
+      "expected_evidence": "Metric table citing AUC\u22480.688 with narrative describing adequacy but not top-tier."
+    },
+    {
+      "id": "claim_150",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "LGD R\u00b2 of 0.174 and EAD R\u00b2 of 0.232 indicate substantial unexplained variance.",
+      "verification_strategy": "Check LGD/EAD regression summaries for reported R\u00b2 and interpretation of residual variance.",
+      "search_queries": [
+        "LGD",
+        "EAD",
+        "R\u00b2",
+        "variance"
+      ],
+      "expected_evidence": "Results showing LGD R\u00b2\u22480.174 and EAD R\u00b2\u22480.232 with commentary."
+    },
+    {
+      "id": "claim_151",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "Model tends to slightly underpredict portfolio EL by about 0.38% to 0.51% on out-of-time samples.",
+      "verification_strategy": "Compute predicted minus actual EL on OOT samples; confirm bias magnitude.",
+      "search_queries": [
+        "underpredict",
+        "EL",
+        "0.38%",
+        "0.51%"
+      ],
+      "expected_evidence": "Backtest error table showing negative bias within the stated range."
+    },
+    {
+      "id": "claim_152",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "Model may perform poorly in tail segments such as F grade due to very small sample sizes (~0.9% of population).",
+      "verification_strategy": "Examine sample size by grade and error metrics for tails (e.g., F).",
+      "search_queries": [
+        "tail",
+        "F grade",
+        "0.9%",
+        "sample"
+      ],
+      "expected_evidence": "Segment table showing ~0.9% volume and elevated error for F grade."
+    },
+    {
+      "id": "claim_153",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "Small business loans and some geographic regions show higher prediction error.",
+      "verification_strategy": "Review backtesting by loan purpose and geography to identify higher-error segments.",
+      "search_queries": [
+        "small",
+        "business",
+        "geographic",
+        "error"
+      ],
+      "expected_evidence": "Segment error analysis highlighting small business and specific regions."
+    },
+    {
+      "id": "claim_154",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "Model is static, with no adaptive learning or online recalibration.",
+      "verification_strategy": "Inspect codebase and monitoring plan for absence of online learning/recalibration routines.",
+      "search_queries": [
+        "static",
+        "adaptive",
+        "online",
+        "recalibration"
+      ],
+      "expected_evidence": "Architecture notes showing batch training only; no online updates."
+    },
+    {
+      "id": "claim_155",
+      "category": "limitations",
+      "claim_type": "limitation",
+      "description": "Prototype is not optimized for high-volume real-time production scoring.",
+      "verification_strategy": "Check performance/latency benchmarks and deployment notes for throughput constraints.",
+      "search_queries": [
+        "prototype",
+        "real-time",
+        "throughput",
+        "latency"
+      ],
+      "expected_evidence": "Non-functional notes indicating limited real-time performance tuning."
+    },
+    {
+      "id": "claim_156",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model is not approved for automated production underwriting decisions or sole basis for credit line determination.",
+      "verification_strategy": "Find governance text prohibiting automated underwriting and sole-basis line setting.",
+      "search_queries": [
+        "not",
+        "approved",
+        "production",
+        "underwriting"
+      ],
+      "expected_evidence": "Policy language explicitly forbidding automated production use for decisions."
+    },
+    {
+      "id": "claim_157",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model cannot be used for regulatory capital calculations (Basel IRB, CCAR).",
+      "verification_strategy": "Check prohibition statements regarding Basel IRB/CCAR usage.",
+      "search_queries": [
+        "regulatory",
+        "capital",
+        "Basel",
+        "CCAR"
+      ],
+      "expected_evidence": "Use-policy clause excluding IRB/CCAR applications."
+    },
+    {
+      "id": "claim_158",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model cannot directly book CECL allowances without overlays and management judgment.",
+      "verification_strategy": "Look for CECL process notes requiring overlays and governance approval.",
+      "search_queries": [
+        "CECL",
+        "allowances",
+        "overlays",
+        "judgment"
+      ],
+      "expected_evidence": "Documentation mandating overlays/management input before booking."
+    },
+    {
+      "id": "claim_159",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model is not validated for secured lending, revolving products, or commercial/small business lending beyond personal loans.",
+      "verification_strategy": "Verify scope limitations excluding secured/revolving/commercial/small business use.",
+      "search_queries": [
+        "secured",
+        "revolving",
+        "commercial",
+        "excluded"
+      ],
+      "expected_evidence": "Scope table restricting applicability to unsecured personal loans."
+    },
+    {
+      "id": "claim_160",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model cannot be used in violation of fair lending laws and must avoid protected-class proxies.",
+      "verification_strategy": "Review fairness policy and variable vetting to avoid proxies.",
+      "search_queries": [
+        "fair",
+        "lending",
+        "proxies",
+        "protected"
+      ],
+      "expected_evidence": "Compliance notes and excluded feature list preventing proxy variables."
+    },
+    {
+      "id": "claim_161",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model is validated for U.S. 50 states only, not U.S. territories or international markets.",
+      "verification_strategy": "Check geography constraints in scope and data filters.",
+      "search_queries": [
+        "U.S.",
+        "50 states",
+        "territories",
+        "international"
+      ],
+      "expected_evidence": "Docs limiting use to 50 states; code filtering territories/international."
+    },
+    {
+      "id": "claim_162",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model is valid only for fixed-rate unsecured personal loans with terms 36 or 60 months.",
+      "verification_strategy": "Confirm product/term constraints enforced in preprocessing/config.",
+      "search_queries": [
+        "fixed-rate",
+        "unsecured",
+        "36",
+        "60"
+      ],
+      "expected_evidence": "Config enforcing product type and 36/60-month terms."
+    },
+    {
+      "id": "claim_163",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model outputs are recommendations, not final decisions; manual overrides and policy rules are required.",
+      "verification_strategy": "Find decisioning documentation requiring analyst review and policy overlays.",
+      "search_queries": [
+        "recommendations",
+        "manual",
+        "overrides",
+        "policy"
+      ],
+      "expected_evidence": "Decision flow showing human-in-the-loop and policy checks."
+    },
+    {
+      "id": "claim_164",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "Model underpredicts portfolio EL by about 0.38% to 0.51%; mitigation includes portfolio-level calibration (+40 bps) and overlays.",
+      "verification_strategy": "Validate bias range and presence of a +40 bps calibration/overlay step.",
+      "search_queries": [
+        "underpredict",
+        "+40",
+        "bps",
+        "overlay"
+      ],
+      "expected_evidence": "Calibration config applying ~+40 bps and overlay documentation."
+    },
+    {
+      "id": "claim_165",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "Small business loans have higher prediction error (1.2%); mitigation includes risk premium, potential separate model, stricter approvals, and enhanced manual review.",
+      "verification_strategy": "Check segment error stats and mitigation measures for small business loans.",
+      "search_queries": [
+        "small",
+        "business",
+        "1.2%",
+        "mitigation"
+      ],
+      "expected_evidence": "Segment plan with risk premium, separate-model option, and manual review steps."
+    },
+    {
+      "id": "claim_166",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "Performance degradation over time (PD AUC decline) is observed; mitigation includes quarterly AUC and PSI monitoring and planned annual refresh.",
+      "verification_strategy": "Review monitoring plan for quarterly AUC/PSI and annual refresh schedule.",
+      "search_queries": [
+        "AUC",
+        "PSI",
+        "quarterly",
+        "refresh"
+      ],
+      "expected_evidence": "Monitoring dashboard plan and refresh cadence documentation."
+    },
+    {
+      "id": "claim_167",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "F grade tail risk is poorly estimated due to limited volume; mitigation includes conservative policy, pricing premiums, manual review, and possibly removing F from approvals.",
+      "verification_strategy": "Inspect policy for conservative treatment/pricing and potential F-grade exclusion.",
+      "search_queries": [
+        "F grade",
+        "tail",
+        "pricing",
+        "exclusion"
+      ],
+      "expected_evidence": "Policy addendum setting higher premiums or removal criteria for F grade."
+    },
+    {
+      "id": "claim_168",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "Missing data (e.g., months since last delinquency 48.4% missing) may introduce bias; mitigation includes sensitivity analysis and separate monitoring of missing segments.",
+      "verification_strategy": "Confirm missingness rates, sensitivity analyses, and monitoring by missing segments.",
+      "search_queries": [
+        "missing",
+        "48.4%",
+        "sensitivity",
+        "monitoring"
+      ],
+      "expected_evidence": "QA report quantifying missingness and sensitivity/segment monitoring outputs."
+    },
+    {
+      "id": "claim_169",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "No macro scenario capability; mitigation includes separate macro overlay framework and management overlays for CECL.",
+      "verification_strategy": "Check for documented macro overlay framework and CECL overlay governance.",
+      "search_queries": [
+        "macro",
+        "overlay",
+        "CECL",
+        "framework"
+      ],
+      "expected_evidence": "Overlay methodology doc and governance approvals."
+    },
+    {
+      "id": "claim_170",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Internal validation was performed by the development team during model construction in October 2025.",
+      "verification_strategy": "Locate internal validation checklist/results dated October 2025.",
+      "search_queries": [
+        "internal",
+        "validation",
+        "October",
+        "2025"
+      ],
+      "expected_evidence": "Validation notes or report signed off by dev team."
+    },
+    {
+      "id": "claim_171",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Independent validation has NOT yet been performed; required before production use.",
+      "verification_strategy": "Verify absence of independent validator report and policy requirement.",
+      "search_queries": [
+        "independent",
+        "validation",
+        "required",
+        "production"
+      ],
+      "expected_evidence": "MRM policy stating requirement and current status as pending."
+    },
+    {
+      "id": "claim_172",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Independent validator must be separate from model development and have credit risk expertise.",
+      "verification_strategy": "Check validator role definition and independence criteria.",
+      "search_queries": [
+        "validator",
+        "independent",
+        "separate",
+        "expertise"
+      ],
+      "expected_evidence": "Governance doc specifying org separation and expertise requirements."
+    },
+    {
+      "id": "claim_173",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Validation scope includes conceptual soundness, data quality, performance, implementation, documentation, model risk, and monitoring plan.",
+      "verification_strategy": "Review validation scope checklist/template covering all listed domains.",
+      "search_queries": [
+        "scope",
+        "conceptual",
+        "implementation",
+        "monitoring"
+      ],
+      "expected_evidence": "Validation plan including the full scope enumerated."
+    },
+    {
+      "id": "claim_174",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Planned validation timeline: independent validation start November 2025; report January 2026; committee review February 2026; potential production approval March 2026.",
+      "verification_strategy": "Find project plan with these milestone dates.",
+      "search_queries": [
+        "timeline",
+        "November 2025",
+        "January 2026",
+        "March 2026"
+      ],
+      "expected_evidence": "Gantt/plan or memo listing the milestone schedule."
+    },
+    {
+      "id": "claim_175",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Outcomes analysis will be performed after 12+ months of production use and then quarterly and annually thereafter.",
+      "verification_strategy": "Check monitoring framework for outcomes analysis cadence (12+ months, quarterly/annual).",
+      "search_queries": [
+        "outcomes",
+        "12 months",
+        "quarterly",
+        "annually"
+      ],
+      "expected_evidence": "Monitoring policy specifying post-deployment outcomes analysis cadence."
+    },
+    {
+      "id": "claim_176",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Benchmark comparison claims current model outperforms previous model on PD AUC (0.688 vs 0.665) and on LGD/EAD/EL MAE.",
+      "verification_strategy": "Locate benchmark section comparing prior vs current model across metrics.",
+      "search_queries": [
+        "benchmark",
+        "AUC 0.665",
+        "MAE",
+        "outperforms"
+      ],
+      "expected_evidence": "Comparison table showing AUC/MAE improvements vs prior model."
+    },
+    {
+      "id": "claim_177",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Model is designed for Python 3.9+ and tested on Python 3.10.x and 3.11.x.",
+      "verification_strategy": "Check pyproject/requirements and CI matrix for supported/tested versions.",
+      "search_queries": [
+        "Python",
+        "3.9+",
+        "3.10",
+        "3.11"
+      ],
+      "expected_evidence": "Environment docs and CI config indicating these versions."
+    },
+    {
+      "id": "claim_178",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Core dependencies include numpy, pandas, scikit-learn, scipy, joblib, matplotlib, seaborn, openpyxl, xlsxwriter, python-dateutil, pytz, typing-extensions.",
+      "verification_strategy": "Inspect requirements.txt/lockfile and import usage.",
+      "search_queries": [
+        "numpy",
+        "pandas",
+        "scikit-learn",
+        "joblib"
+      ],
+      "expected_evidence": "Dependency file listing the named packages."
+    },
+    {
+      "id": "claim_179",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Container environment uses python:3.10.12-slim-bullseye on Debian 11 with Docker and optionally Kubernetes.",
+      "verification_strategy": "Review Dockerfile/base image and deployment notes mentioning Kubernetes.",
+      "search_queries": [
+        "Dockerfile",
+        "3.10.12",
+        "bullseye",
+        "Kubernetes"
+      ],
+      "expected_evidence": "Container spec referencing python:3.10.12-slim-bullseye and K8s option."
+    },
+    {
+      "id": "claim_180",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Random seed 42 is used across numpy, Python random, and scikit-learn utilities for reproducibility.",
+      "verification_strategy": "Search code for seed setting in numpy/random/sklearn contexts.",
+      "search_queries": [
+        "seed",
+        "42",
+        "numpy",
+        "sklearn"
+      ],
+      "expected_evidence": "Initialization code setting seed=42 across libraries."
+    },
+    {
+      "id": "claim_181",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Floating point precision is 64-bit (float64).",
+      "verification_strategy": "Check dtype specifications and any global numpy settings.",
+      "search_queries": [
+        "float64",
+        "precision",
+        "dtype",
+        "numpy"
+      ],
+      "expected_evidence": "Config or code ensuring float64 precision."
+    },
+    {
+      "id": "claim_182",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Model serialization uses Joblib pickle (.pkl) with protocol 4.",
+      "verification_strategy": "Inspect save/load utilities for joblib.dump/load and protocol setting.",
+      "search_queries": [
+        "Joblib",
+        "pickle",
+        "protocol",
+        "4"
+      ],
+      "expected_evidence": "Serialization code using joblib with protocol=4."
+    },
+    {
+      "id": "claim_183",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Model artifacts include pd_model_v1.0.0.pkl, lgd_stage1_v1.0.0.pkl, lgd_stage2_v1.0.0.pkl, ead_model_v1.0.0.pkl, feature_mappings_v1.0.0.pkl, risk_class_cutoffs_v1.0.0.pkl.",
+      "verification_strategy": "List artifacts in storage and verify filenames/versions.",
+      "search_queries": [
+        "artifacts",
+        "pd_model",
+        "lgd_stage1",
+        "risk_class_cutoffs"
+      ],
+      "expected_evidence": "Repository or artifact store inventory matching file names."
+    },
+    {
+      "id": "claim_184",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Code quality standards require full type hints, docstrings, 80%+ test coverage, flake8 linting, and black formatting.",
+      "verification_strategy": "Review CONTRIBUTING/CI for type checking, coverage threshold, flake8/black steps.",
+      "search_queries": [
+        "type hints",
+        "coverage",
+        "flake8",
+        "black"
+      ],
+      "expected_evidence": "CI pipeline enforcing linting/formatting and coverage \u226580%."
+    },
+    {
+      "id": "claim_185",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Security practices include no secrets in code, dependency vulnerability scans, and encryption at rest in production.",
+      "verification_strategy": "Check security checklist and CI for secret scans and dependency checks.",
+      "search_queries": [
+        "secrets",
+        "vulnerability",
+        "encryption",
+        "production"
+      ],
+      "expected_evidence": "Security docs and CI steps scanning secrets/dependencies; prod encryption policy."
+    },
+    {
+      "id": "claim_186",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Monitoring and logging use Python logging with structured JSON, Prometheus metrics, and optional APM tools.",
+      "verification_strategy": "Inspect logging/metrics integration and APM hooks.",
+      "search_queries": [
+        "logging",
+        "JSON",
+        "Prometheus",
+        "APM"
+      ],
+      "expected_evidence": "Code/config exporting structured logs and metrics to Prometheus/APM."
+    },
+    {
+      "id": "claim_187",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Versioning follows semantic-like scheme: major for redevelopment, minor for recalibration or feature changes, patch for documentation/bug fixes.",
+      "verification_strategy": "Check versioning policy and tag history aligning to major/minor/patch semantics.",
+      "search_queries": [
+        "versioning",
+        "major",
+        "minor",
+        "patch"
+      ],
+      "expected_evidence": "Release notes or tags following the stated scheme."
+    },
+    {
+      "id": "claim_188",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "All artifacts are stored in a centralized MRM system with access control and audit trail.",
+      "verification_strategy": "Verify artifact repository location, ACLs, and audit logs.",
+      "search_queries": [
+        "MRM",
+        "artifacts",
+        "access",
+        "audit"
+      ],
+      "expected_evidence": "MRM inventory showing artifacts with ACLs and audit trail."
+    },
+    {
+      "id": "claim_189",
+      "category": "glossary_claims",
+      "claim_type": "definition",
+      "description": "AUC is a discrimination metric between 0 and 1; >0.70 considered strong for credit models.",
+      "verification_strategy": "Review glossary and any metric guidance used by credit risk teams.",
+      "search_queries": [
+        "AUC",
+        "discrimination",
+        "0.70",
+        "strong"
+      ],
+      "expected_evidence": "Glossary text defining AUC and strength threshold."
+    },
+    {
+      "id": "claim_190",
+      "category": "glossary_claims",
+      "claim_type": "definition",
+      "description": "Gini = 2 \u00d7 AUC \u2212 1.",
+      "verification_strategy": "Check glossary and evaluation notebook formulae.",
+      "search_queries": [
+        "Gini",
+        "2\u00d7AUC",
+        "minus",
+        "1"
+      ],
+      "expected_evidence": "Formula reference equating Gini to 2*AUC-1."
+    },
+    {
+      "id": "claim_191",
+      "category": "glossary_claims",
+      "claim_type": "definition",
+      "description": "KS statistic measures maximum separation between CDFs of goods and bads.",
+      "verification_strategy": "Confirm KS definition in glossary and evaluation code.",
+      "search_queries": [
+        "KS",
+        "maximum",
+        "CDFs",
+        "separation"
+      ],
+      "expected_evidence": "Definition text and code computing KS via CDF separation."
+    },
+    {
+      "id": "claim_192",
+      "category": "glossary_claims",
+      "claim_type": "definition",
+      "description": "PD is probability of default within specified time horizon (12 months here).",
+      "verification_strategy": "Check PD definition in docs and parameterization to 12 months.",
+      "search_queries": [
+        "PD",
+        "probability",
+        "12 months",
+        "default"
+      ],
+      "expected_evidence": "Glossary entry and config showing 12-month PD."
+    },
+    {
+      "id": "claim_193",
+      "category": "glossary_claims",
+      "claim_type": "definition",
+      "description": "LGD is percentage of exposure not recovered after default; LGD = 1 \u2212 Recovery Rate.",
+      "verification_strategy": "Verify LGD definition in docs and code computing 1\u2212recovery.",
+      "search_queries": [
+        "LGD",
+        "1\u2212Recovery",
+        "percentage",
+        "exposure"
+      ],
+      "expected_evidence": "Definition and computation of LGD from recovery rate."
+    },
+    {
+      "id": "claim_194",
+      "category": "glossary_claims",
+      "claim_type": "definition",
+      "description": "EAD is outstanding balance at time of default.",
+      "verification_strategy": "Confirm EAD definition appears in glossary and EAD module.",
+      "search_queries": [
+        "EAD",
+        "outstanding",
+        "default",
+        "balance"
+      ],
+      "expected_evidence": "Glossary text and EAD code reflecting this definition."
+    },
+    {
+      "id": "claim_195",
+      "category": "glossary_claims",
+      "claim_type": "definition",
+      "description": "CCF is proportion of committed exposure expected to be outstanding at default.",
+      "verification_strategy": "Check CCF definition in docs and formula in EAD modeling.",
+      "search_queries": [
+        "CCF",
+        "proportion",
+        "exposure",
+        "default"
+      ],
+      "expected_evidence": "Definition and code computing CCF for EAD."
+    },
+    {
+      "id": "claim_196",
+      "category": "glossary_claims",
+      "claim_type": "definition",
+      "description": "PSI is used for population stability and drift detection.",
+      "verification_strategy": "Look for monitoring plan using PSI thresholds and alerts.",
+      "search_queries": [
+        "PSI",
+        "population",
+        "stability",
+        "drift"
+      ],
+      "expected_evidence": "Monitoring docs describing PSI calculation and thresholds."
+    }
+  ]
+}

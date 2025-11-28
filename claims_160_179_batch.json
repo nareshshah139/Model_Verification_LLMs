@@ -1,0 +1,292 @@
+{
+  "claims": [
+    {
+      "id": "claim_160",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model cannot be used in violation of fair lending laws and must avoid protected-class proxies.",
+      "verification_strategy": "Review fairness policy and variable vetting to avoid proxies.",
+      "search_queries": [
+        "fair",
+        "lending",
+        "proxies",
+        "protected"
+      ],
+      "expected_evidence": "Compliance notes and excluded feature list preventing proxy variables."
+    },
+    {
+      "id": "claim_161",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model is validated for U.S. 50 states only, not U.S. territories or international markets.",
+      "verification_strategy": "Check geography constraints in scope and data filters.",
+      "search_queries": [
+        "U.S.",
+        "50 states",
+        "territories",
+        "international"
+      ],
+      "expected_evidence": "Docs limiting use to 50 states; code filtering territories/international."
+    },
+    {
+      "id": "claim_162",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model is valid only for fixed-rate unsecured personal loans with terms 36 or 60 months.",
+      "verification_strategy": "Confirm product/term constraints enforced in preprocessing/config.",
+      "search_queries": [
+        "fixed-rate",
+        "unsecured",
+        "36",
+        "60"
+      ],
+      "expected_evidence": "Config enforcing product type and 36/60-month terms."
+    },
+    {
+      "id": "claim_163",
+      "category": "use_case_restrictions",
+      "claim_type": "use_restriction",
+      "description": "Model outputs are recommendations, not final decisions; manual overrides and policy rules are required.",
+      "verification_strategy": "Find decisioning documentation requiring analyst review and policy overlays.",
+      "search_queries": [
+        "recommendations",
+        "manual",
+        "overrides",
+        "policy"
+      ],
+      "expected_evidence": "Decision flow showing human-in-the-loop and policy checks."
+    },
+    {
+      "id": "claim_164",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "Model underpredicts portfolio EL by about 0.38% to 0.51%; mitigation includes portfolio-level calibration (+40 bps) and overlays.",
+      "verification_strategy": "Validate bias range and presence of a +40 bps calibration/overlay step.",
+      "search_queries": [
+        "underpredict",
+        "+40",
+        "bps",
+        "overlay"
+      ],
+      "expected_evidence": "Calibration config applying ~+40 bps and overlay documentation."
+    },
+    {
+      "id": "claim_165",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "Small business loans have higher prediction error (1.2%); mitigation includes risk premium, potential separate model, stricter approvals, and enhanced manual review.",
+      "verification_strategy": "Check segment error stats and mitigation measures for small business loans.",
+      "search_queries": [
+        "small",
+        "business",
+        "1.2%",
+        "mitigation"
+      ],
+      "expected_evidence": "Segment plan with risk premium, separate-model option, and manual review steps."
+    },
+    {
+      "id": "claim_166",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "Performance degradation over time (PD AUC decline) is observed; mitigation includes quarterly AUC and PSI monitoring and planned annual refresh.",
+      "verification_strategy": "Review monitoring plan for quarterly AUC/PSI and annual refresh schedule.",
+      "search_queries": [
+        "AUC",
+        "PSI",
+        "quarterly",
+        "refresh"
+      ],
+      "expected_evidence": "Monitoring dashboard plan and refresh cadence documentation."
+    },
+    {
+      "id": "claim_167",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "F grade tail risk is poorly estimated due to limited volume; mitigation includes conservative policy, pricing premiums, manual review, and possibly removing F from approvals.",
+      "verification_strategy": "Inspect policy for conservative treatment/pricing and potential F-grade exclusion.",
+      "search_queries": [
+        "F grade",
+        "tail",
+        "pricing",
+        "exclusion"
+      ],
+      "expected_evidence": "Policy addendum setting higher premiums or removal criteria for F grade."
+    },
+    {
+      "id": "claim_168",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "Missing data (e.g., months since last delinquency 48.4% missing) may introduce bias; mitigation includes sensitivity analysis and separate monitoring of missing segments.",
+      "verification_strategy": "Confirm missingness rates, sensitivity analyses, and monitoring by missing segments.",
+      "search_queries": [
+        "missing",
+        "48.4%",
+        "sensitivity",
+        "monitoring"
+      ],
+      "expected_evidence": "QA report quantifying missingness and sensitivity/segment monitoring outputs."
+    },
+    {
+      "id": "claim_169",
+      "category": "known_issues_and_mitigation",
+      "claim_type": "known_issue",
+      "description": "No macro scenario capability; mitigation includes separate macro overlay framework and management overlays for CECL.",
+      "verification_strategy": "Check for documented macro overlay framework and CECL overlay governance.",
+      "search_queries": [
+        "macro",
+        "overlay",
+        "CECL",
+        "framework"
+      ],
+      "expected_evidence": "Overlay methodology doc and governance approvals."
+    },
+    {
+      "id": "claim_170",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Internal validation was performed by the development team during model construction in October 2025.",
+      "verification_strategy": "Locate internal validation checklist/results dated October 2025.",
+      "search_queries": [
+        "internal",
+        "validation",
+        "October",
+        "2025"
+      ],
+      "expected_evidence": "Validation notes or report signed off by dev team."
+    },
+    {
+      "id": "claim_171",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Independent validation has NOT yet been performed; required before production use.",
+      "verification_strategy": "Verify absence of independent validator report and policy requirement.",
+      "search_queries": [
+        "independent",
+        "validation",
+        "required",
+        "production"
+      ],
+      "expected_evidence": "MRM policy stating requirement and current status as pending."
+    },
+    {
+      "id": "claim_172",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Independent validator must be separate from model development and have credit risk expertise.",
+      "verification_strategy": "Check validator role definition and independence criteria.",
+      "search_queries": [
+        "validator",
+        "independent",
+        "separate",
+        "expertise"
+      ],
+      "expected_evidence": "Governance doc specifying org separation and expertise requirements."
+    },
+    {
+      "id": "claim_173",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Validation scope includes conceptual soundness, data quality, performance, implementation, documentation, model risk, and monitoring plan.",
+      "verification_strategy": "Review validation scope checklist/template covering all listed domains.",
+      "search_queries": [
+        "scope",
+        "conceptual",
+        "implementation",
+        "monitoring"
+      ],
+      "expected_evidence": "Validation plan including the full scope enumerated."
+    },
+    {
+      "id": "claim_174",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Planned validation timeline: independent validation start November 2025; report January 2026; committee review February 2026; potential production approval March 2026.",
+      "verification_strategy": "Find project plan with these milestone dates.",
+      "search_queries": [
+        "timeline",
+        "November 2025",
+        "January 2026",
+        "March 2026"
+      ],
+      "expected_evidence": "Gantt/plan or memo listing the milestone schedule."
+    },
+    {
+      "id": "claim_175",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Outcomes analysis will be performed after 12+ months of production use and then quarterly and annually thereafter.",
+      "verification_strategy": "Check monitoring framework for outcomes analysis cadence (12+ months, quarterly/annual).",
+      "search_queries": [
+        "outcomes",
+        "12 months",
+        "quarterly",
+        "annually"
+      ],
+      "expected_evidence": "Monitoring policy specifying post-deployment outcomes analysis cadence."
+    },
+    {
+      "id": "claim_176",
+      "category": "validation_and_governance",
+      "claim_type": "validation_governance",
+      "description": "Benchmark comparison claims current model outperforms previous model on PD AUC (0.688 vs 0.665) and on LGD/EAD/EL MAE.",
+      "verification_strategy": "Locate benchmark section comparing prior vs current model across metrics.",
+      "search_queries": [
+        "benchmark",
+        "AUC 0.665",
+        "MAE",
+        "outperforms"
+      ],
+      "expected_evidence": "Comparison table showing AUC/MAE improvements vs prior model."
+    },
+    {
+      "id": "claim_177",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Model is designed for Python 3.9+ and tested on Python 3.10.x and 3.11.x.",
+      "verification_strategy": "Check pyproject/requirements and CI matrix for supported/tested versions.",
+      "search_queries": [
+        "Python",
+        "3.9+",
+        "3.10",
+        "3.11"
+      ],
+      "expected_evidence": "Environment docs and CI config indicating these versions."
+    },
+    {
+      "id": "claim_178",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Core dependencies include numpy, pandas, scikit-learn, scipy, joblib, matplotlib, seaborn, openpyxl, xlsxwriter, python-dateutil, pytz, typing-extensions.",
+      "verification_strategy": "Inspect requirements.txt/lockfile and import usage.",
+      "search_queries": [
+        "numpy",
+        "pandas",
+        "scikit-learn",
+        "joblib"
+      ],
+      "expected_evidence": "Dependency file listing the named packages."
+    },
+    {
+      "id": "claim_179",
+      "category": "runtime_environment_and_artifacts",
+      "claim_type": "runtime_environment",
+      "description": "Container environment uses python:3.10.12-slim-bullseye on Debian 11 with Docker and optionally Kubernetes.",
+      "verification_strategy": "Review Dockerfile/base image and deployment notes mentioning Kubernetes.",
+      "search_queries": [
+        "Dockerfile",
+        "3.10.12",
+        "bullseye",
+        "Kubernetes"
+      ],
+      "expected_evidence": "Container spec referencing python:3.10.12-slim-bullseye and K8s option."
+    }
+  ],
+  "workspace_path": "/Users/nshah/Documents/AST-RAG-Based-Model-Card-Checks/Lending-Club-Credit-Scoring",
+  "notebooks": [
+    "notebooks/1_data_cleaning_understanding.ipynb",
+    "notebooks/2_eda.ipynb",
+    "notebooks/3_pd_modeling.ipynb",
+    "notebooks/4_lgd_ead_modeling.ipynb",
+    "notebooks/5_pd_model_monitoring.ipynb"
+  ]
+}

@@ -231,19 +231,19 @@ class LLMExtractorTool:
         
         # Process notebooks sequentially
         print(f"Processing {len(notebook_paths)} notebooks sequentially...")
-            completed = 0
+        completed = 0
         total = len(notebook_paths)
         for nb_path in notebook_paths:
-                completed += 1
-                try:
+            completed += 1
+            try:
                 nb_path, extracted = process_notebook(nb_path)
-                    for metric, value in extracted.items():
+                for metric, value in extracted.items():
                     if metric.startswith("_"):
-                            continue
-                        all_metrics[metric] = value
-                        all_metrics[f"_{metric}_file"] = Path(nb_path).name
+                        continue
+                    all_metrics[metric] = value
+                    all_metrics[f"_{metric}_file"] = Path(nb_path).name
                 print(f"  [{completed}/{total}] Processed {Path(nb_path).name}")
-                except Exception as e:
+            except Exception as e:
                 print(f"  [{completed}/{total}] Failed {Path(nb_path).name}: {e}")
         
         print(f"Completed sequential processing of {len(notebook_paths)} notebooks")

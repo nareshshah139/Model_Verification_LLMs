@@ -10,6 +10,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Settings, AlertCircle, CheckCircle2, XCircle, Save } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -17,18 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Settings, Check, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type LLMProvider = "openai" | "anthropic" | "openrouter";
 
 interface LLMConfig {
   provider: LLMProvider;
   model: string;
-  apiKey: string;
+  hasApiKey?: boolean;
 }
 
 const OPENAI_MODELS = [
@@ -51,18 +50,15 @@ const ANTHROPIC_MODELS = [
 ];
 
 const OPENROUTER_MODELS = [
-  // OpenAI models via OpenRouter
   { value: "openai/gpt-5-pro", label: "GPT-5 Pro (via OpenRouter)", badge: "Latest" },
   { value: "openai/gpt-5-codex", label: "GPT-5 Codex (via OpenRouter)", badge: "Coding" },
   { value: "openai/gpt-4o", label: "GPT-4o (via OpenRouter)", badge: "Latest" },
   { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (via OpenRouter)", badge: "Fast" },
   { value: "openai/gpt-4-turbo", label: "GPT-4 Turbo (via OpenRouter)" },
-  // Anthropic models via OpenRouter
   { value: "anthropic/claude-sonnet-4-5", label: "Claude Sonnet 4.5 (via OpenRouter)" },
   { value: "anthropic/claude-opus-4-1", label: "Claude Opus 4.1 (via OpenRouter)", badge: "Powerful" },
   { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (via OpenRouter)" },
   { value: "anthropic/claude-3-opus", label: "Claude 3 Opus (via OpenRouter)" },
-  // Other popular models
   { value: "google/gemini-pro-1.5", label: "Gemini Pro 1.5" },
   { value: "meta-llama/llama-3.1-405b-instruct", label: "Llama 3.1 405B" },
   { value: "mistralai/mistral-large", label: "Mistral Large" },
@@ -70,13 +66,13 @@ const OPENROUTER_MODELS = [
 
 export function LLMSettings() {
   const [open, setOpen] = useState(false);
-  const [provider, setProvider] = useState<LLMProvider>("openai");
-  const [model, setModel] = useState("");
-  const [apiKey, setApiKey] = useState("");
   const [currentConfig, setCurrentConfig] = useState<LLMConfig | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<LLMProvider>("anthropic");
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Load current configuration
   useEffect(() => {
@@ -86,37 +82,31 @@ export function LLMSettings() {
   }, [open]);
 
   const loadCurrentConfig = async () => {
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
     try {
       const response = await fetch("/api/llm/config");
       if (response.ok) {
         const config = await response.json();
         setCurrentConfig(config);
-        setProvider(config.provider);
-        setModel(config.model);
-        // Don't load API key for security reasons
+        setSelectedProvider(config.provider);
+        setSelectedModel(config.model);
+      } else {
+        setError("Failed to load configuration");
       }
     } catch (err) {
       console.error("Failed to load LLM config:", err);
+      setError("Failed to load configuration");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSave = async () => {
-    setError(null);
-    setSuccess(false);
-
-    if (!model) {
-      setError("Please select a model");
-      return;
-    }
-
-    if (!apiKey && provider !== currentConfig?.provider) {
-      const providerName = provider === "openai" ? "OpenAI" : provider === "anthropic" ? "Anthropic" : "OpenRouter";
-      setError(`Please enter your ${providerName} API key`);
-      return;
-    }
-
+  const saveConfiguration = async () => {
     setSaving(true);
-
+    setError(null);
+    setSuccessMessage(null);
     try {
       const response = await fetch("/api/llm/config", {
         method: "POST",
@@ -124,38 +114,47 @@ export function LLMSettings() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          provider,
-          model,
-          ...(apiKey && { apiKey }),
+          provider: selectedProvider,
+          model: selectedModel,
         }),
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to save configuration");
+      
+      if (response.ok) {
+        const updatedConfig = await response.json();
+        setCurrentConfig(updatedConfig);
+        setSuccessMessage("Configuration saved successfully! Restart services to apply changes.");
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to save configuration");
       }
-
-      setSuccess(true);
-      setCurrentConfig({ provider, model, apiKey: "" });
-      
-      // Clear API key field after successful save
-      setApiKey("");
-      
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save configuration");
+      console.error("Failed to save LLM config:", err);
+      setError("Failed to save configuration");
     } finally {
       setSaving(false);
     }
   };
 
-  const getModels = () => {
-    if (provider === "openai") return OPENAI_MODELS;
-    if (provider === "anthropic") return ANTHROPIC_MODELS;
-    return OPENROUTER_MODELS;
+  const getAvailableModels = () => {
+    switch (selectedProvider) {
+      case "openai":
+        return OPENAI_MODELS;
+      case "anthropic":
+        return ANTHROPIC_MODELS;
+      case "openrouter":
+        return OPENROUTER_MODELS;
+      default:
+        return ANTHROPIC_MODELS;
+    }
   };
+
+  // Update selected model when provider changes
+  useEffect(() => {
+    const models = getAvailableModels();
+    if (models.length > 0 && !models.find(m => m.value === selectedModel)) {
+      setSelectedModel(models[0].value);
+    }
+  }, [selectedProvider]);
 
   const getCurrentModelLabel = () => {
     if (!currentConfig) return "Not configured";
@@ -169,6 +168,14 @@ export function LLMSettings() {
     return modelInfo ? modelInfo.label : currentConfig.model;
   };
 
+  const getProviderName = (provider: LLMProvider) => {
+    switch (provider) {
+      case "openai": return "OpenAI";
+      case "anthropic": return "Anthropic";
+      case "openrouter": return "OpenRouter";
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -177,127 +184,21 @@ export function LLMSettings() {
           LLM Settings
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>LLM Configuration</DialogTitle>
           <DialogDescription>
-            Configure your LLM provider and model. Changes take effect immediately.
+            Configure your LLM provider and model. Changes are saved to .env file.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Current Configuration */}
-          {currentConfig && (
-            <Alert>
-              <AlertDescription className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-600" />
-                <span className="text-sm">
-                  Current: <strong>
-                    {currentConfig.provider === "openai" 
-                      ? "OpenAI" 
-                      : currentConfig.provider === "anthropic" 
-                      ? "Anthropic" 
-                      : "OpenRouter"}
-                  </strong> -{" "}
-                  {getCurrentModelLabel()}
-                </span>
-              </AlertDescription>
-            </Alert>
+          {loading && (
+            <div className="text-center text-sm text-muted-foreground">
+              Loading configuration...
+            </div>
           )}
 
-          {/* Provider Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="provider">Provider</Label>
-            <Select value={provider} onValueChange={(value) => setProvider(value as LLMProvider)}>
-              <SelectTrigger id="provider">
-                <SelectValue placeholder="Select provider" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="openai">OpenAI</SelectItem>
-                <SelectItem value="anthropic">Anthropic</SelectItem>
-                <SelectItem value="openrouter">OpenRouter</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Model Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="model">Model</Label>
-            <Select value={model} onValueChange={setModel}>
-              <SelectTrigger id="model">
-                <SelectValue placeholder="Select model" />
-              </SelectTrigger>
-              <SelectContent>
-                {getModels().map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <div className="flex items-center gap-2">
-                      <span>{m.label}</span>
-                      {m.badge && (
-                        <Badge variant="secondary" className="ml-auto text-xs">
-                          {m.badge}
-                        </Badge>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* API Key Input */}
-          <div className="space-y-2">
-            <Label htmlFor="apiKey">
-              API Key {provider !== currentConfig?.provider && <span className="text-red-500">*</span>}
-            </Label>
-            <Input
-              id="apiKey"
-              type="password"
-              placeholder={
-                provider === currentConfig?.provider
-                  ? "Leave blank to keep existing key"
-                  : `Enter your ${provider === "openai" ? "OpenAI" : provider === "anthropic" ? "Anthropic" : "OpenRouter"} API key`
-              }
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              {provider === "openai"
-                ? "Get your API key from platform.openai.com"
-                : provider === "anthropic"
-                ? "Get your API key from console.anthropic.com"
-                : "Get your API key from openrouter.ai/keys"}
-            </p>
-          </div>
-
-          {/* Model Information */}
-          <div className="rounded-lg bg-muted p-3 text-sm">
-            <h4 className="font-medium mb-2">Model Information</h4>
-            {provider === "openai" && (
-              <ul className="space-y-1 text-muted-foreground">
-                <li>• GPT-4o: Most capable, multimodal</li>
-                <li>• GPT-4o Mini: Fast and cost-effective</li>
-                <li>• GPT-4 Turbo: High performance</li>
-              </ul>
-            )}
-            {provider === "anthropic" && (
-              <ul className="space-y-1 text-muted-foreground">
-                <li>• Sonnet 4.5: Best for coding and agents (NEW)</li>
-                <li>• Opus 4.1: Most capable reasoning (NEW)</li>
-                <li>• Haiku 4.5: Fastest, low latency (NEW)</li>
-                <li>• Claude 3.5: Previous generation</li>
-              </ul>
-            )}
-            {provider === "openrouter" && (
-              <ul className="space-y-1 text-muted-foreground">
-                <li>• Access GPT-4, Claude, Gemini, and more</li>
-                <li>• Unified API for multiple providers</li>
-                <li>• Pay-as-you-go pricing</li>
-                <li>• No vendor lock-in</li>
-              </ul>
-            )}
-          </div>
-
-          {/* Error Message */}
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -305,29 +206,169 @@ export function LLMSettings() {
             </Alert>
           )}
 
-          {/* Success Message */}
-          {success && (
-            <Alert className="border-green-600 bg-green-50 dark:bg-green-950">
-              <Check className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-600">
-                Configuration saved successfully!
+          {successMessage && (
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                {successMessage}
               </AlertDescription>
             </Alert>
           )}
+
+          {!loading && currentConfig && (
+            <>
+              {/* Configuration Form */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="provider">LLM Provider</Label>
+                  <Select
+                    value={selectedProvider}
+                    onValueChange={(value) => setSelectedProvider(value as LLMProvider)}
+                  >
+                    <SelectTrigger id="provider">
+                      <SelectValue placeholder="Select provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="anthropic">
+                        <div className="flex items-center gap-2">
+                          <span>Anthropic (Claude)</span>
+                          {currentConfig.provider === "anthropic" && currentConfig.hasApiKey && (
+                            <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          )}
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="openai">
+                        <div className="flex items-center gap-2">
+                          <span>OpenAI (GPT)</span>
+                          {currentConfig.provider === "openai" && currentConfig.hasApiKey && (
+                            <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          )}
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="openrouter">
+                        <div className="flex items-center gap-2">
+                          <span>OpenRouter (Multi-model)</span>
+                          {currentConfig.provider === "openrouter" && currentConfig.hasApiKey && (
+                            <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          )}
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="model">Model</Label>
+                  <Select
+                    value={selectedModel}
+                    onValueChange={setSelectedModel}
+                  >
+                    <SelectTrigger id="model">
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAvailableModels().map((model) => (
+                        <SelectItem key={model.value} value={model.value}>
+                          <div className="flex items-center gap-2">
+                            <span>{model.label}</span>
+                            {model.badge && (
+                              <Badge variant="secondary" className="text-xs">
+                                {model.badge}
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Save Button */}
+                <Button
+                  onClick={saveConfiguration}
+                  disabled={saving}
+                  className="w-full gap-2"
+                >
+                  {saving ? (
+                    <>Saving...</>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save Configuration
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* API Key Status */}
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold">API Key Status</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedProvider === "anthropic" && "Anthropic"}
+                      {selectedProvider === "openai" && "OpenAI"}
+                      {selectedProvider === "openrouter" && "OpenRouter"} API Key
+                    </p>
+                  </div>
+                  {(selectedProvider === currentConfig.provider && currentConfig.hasApiKey) ? (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Configured</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-orange-600">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Not Set</span>
+                    </div>
+                  )}
+                </div>
+
+                <Alert>
+                  <AlertDescription className="text-xs">
+                    {(selectedProvider === currentConfig.provider && currentConfig.hasApiKey) ? (
+                      <span>
+                        ✓ API key is configured in .env file. You can use verification features.
+                      </span>
+                    ) : (
+                      <div className="space-y-2">
+                        <span>
+                          To use verification features, add your API key to the .env file:
+                        </span>
+                        <div className="font-mono bg-muted p-2 rounded text-xs mt-1">
+                          {selectedProvider.toUpperCase()}_API_KEY=your-key-here
+                        </div>
+                        <Button variant="outline" size="sm" className="mt-2" asChild>
+                          <a
+                            href={
+                              selectedProvider === "openai"
+                                ? "https://platform.openai.com/api-keys"
+                                : selectedProvider === "anthropic"
+                                ? "https://console.anthropic.com/"
+                                : "https://openrouter.ai/keys"
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Get {getProviderName(selectedProvider)} API Key →
+                          </a>
+                        </Button>
+                      </div>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Configuration"}
+        {/* Close Button */}
+        <div className="flex justify-end">
+          <Button onClick={() => setOpen(false)}>
+            Close
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-

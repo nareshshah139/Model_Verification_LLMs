@@ -20,3 +20,35 @@ export interface CodeFacts {
 
 export interface CardFacts extends CodeFacts {}
 
+// Claim types for LLM extraction and verification
+export interface ClaimLocation {
+  file?: string;
+  line?: number;
+}
+
+export interface Claim {
+  id: string;
+  text: string;
+  category?: string;
+  description?: string;
+  location?: ClaimLocation;
+}
+
+export interface ClaimsPayload {
+  claims: Claim[];
+}
+
+// API response types for microservices
+export interface ApiErrorResponse {
+  error: string;
+  details?: string;
+  status?: number;
+}
+
+export interface StreamEvent {
+  type: 'progress' | 'complete' | 'error';
+  message?: string;
+  data?: Record<string, unknown>;
+  report?: Record<string, unknown>;
+}
+

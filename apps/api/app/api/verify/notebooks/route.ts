@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { getLLMConfig } from "@/src/lib/llm-config";
 import mammoth from "mammoth";
 import { optimizeDocxText, getOptimizationStats } from "@/src/lib/docx-optimizer";
+import { stripCodeFences } from "@/src/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,26 +64,94 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call CodeAct agent API streaming endpoint
+    // Get LLM configuration (includes API key)
+    let llmConfig;
+    try {
+      llmConfig = getLLMConfig();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ 
+          error: `LLM configuration error: ${error instanceof Error ? error.message : 'Unknown error'}. Please configure API keys in LLM Settings.` 
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const llmProvider = llmConfig.provider;
+    const llmModel = llmConfig.model;
+    
+    // Get the appropriate API key (support OpenRouter as well)
+    const apiKey =
+      llmProvider === "openai"
+        ? process.env.OPENAI_API_KEY
+        : llmProvider === "anthropic"
+        ? process.env.ANTHROPIC_API_KEY
+        : process.env.OPENROUTER_API_KEY;
+
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ 
+          error: `${
+            llmProvider === "openai"
+              ? "OPENAI_API_KEY"
+              : llmProvider === "anthropic"
+              ? "ANTHROPIC_API_KEY"
+              : "OPENROUTER_API_KEY"
+          } not configured. Please set it in LLM Settings or environment variables.` 
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Call CodeAct agent API streaming endpoint (dynamic, model-card-driven mode)
     const codeactUrl = process.env.CODEACT_API_URL || "http://localhost:8001";
     
-    const response = await fetch(`${codeactUrl}/verify/stream`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model_card_text: modelCardText,
-        repo_path: repoPath,
-        runtime_enabled: false,
-        sg_binary: "sg",
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${codeactUrl}/verify/codeact/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Pass API key to CodeAct service via header
+          "X-API-Key": apiKey,
+          "X-LLM-Provider": llmProvider,
+          "X-LLM-Model": llmModel,
+        },
+        body: JSON.stringify({
+          model_card_text: modelCardText,
+          repo_path: repoPath,
+          runtime_enabled: false,
+          sg_binary: "sg",
+          llm_provider: llmProvider,
+          llm_model: llmModel,
+        }),
+      });
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Failed to connect to CodeAct service at ${codeactUrl}. ` +
+                 `Is the service running? Error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+        }),
+        { status: 503, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
+      const contentType = response.headers.get("content-type") || "";
+      
+      // Check if we got HTML (service crash/500)
+      let errorMessage = errorText;
+      if (errorText.trim().startsWith("<")) {
+        errorMessage = `CodeAct service returned HTML error page (status ${response.status}). ` +
+                      `Service may have crashed. Check logs at services/codeact_cardcheck/. ` +
+                      `First 200 chars: ${errorText.slice(0, 200)}`;
+      }
+      
+      console.error(`[VERIFY-NB] CodeAct service error: status=${response.status}, content-type=${contentType}, body=${errorText.slice(0, 500)}`);
+      
       return new Response(
-        JSON.stringify({ error: errorText || "Verification failed" }),
+        JSON.stringify({ error: errorMessage }),
         { status: response.status, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -120,7 +190,9 @@ export async function POST(request: NextRequest) {
             for (const line of lines) {
               if (line.startsWith('data: ')) {
                 try {
-                  const data = JSON.parse(line.slice(6));
+                  // Strip code fences before parsing
+                  const payload = stripCodeFences(line.slice(6));
+                  const data = JSON.parse(payload);
                   
                   // If this is the complete event, add discrepancies
                   if (data.type === 'complete' && data.report) {
@@ -142,8 +214,9 @@ export async function POST(request: NextRequest) {
                       console.log(`[VERIFY-NB] SSE forwarded #${eventCount}, rss=${(mu.rss/(1024*1024)).toFixed(1)}MB, heapUsed=${(mu.heapUsed/(1024*1024)).toFixed(1)}MB, lineBytes=${Buffer.byteLength(line, 'utf8')}`);
                     } catch {}
                   }
-                } catch {
-                  // Forward unparseable lines as-is
+                } catch (parseError) {
+                  // Log parse errors but forward line as-is
+                  console.warn(`[VERIFY-NB] Failed to parse SSE line: ${line.slice(0, 100)}`, parseError);
                   controller.enqueue(encoder.encode(line + '\n'));
                 }
               } else if (line.trim()) {

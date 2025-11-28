@@ -3,7 +3,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import tempfile
 import shutil
 from pathlib import Path
@@ -13,6 +13,7 @@ import threading
 import queue
 import os
 import sys
+import gc
 
 # Check for required dependencies at startup
 try:
@@ -43,6 +44,44 @@ except Exception:
 
 app = FastAPI(title="CodeAct CardCheck API")
 
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint.
+    Returns service status and basic diagnostics.
+    """
+    import platform
+    import sys
+    
+    try:
+        import openai
+        openai_version = openai.__version__
+    except Exception:
+        openai_version = "not available"
+    
+    try:
+        import anthropic
+        anthropic_version = anthropic.__version__
+    except Exception:
+        anthropic_version = "not available"
+    
+    return {
+        "status": "healthy",
+        "service": "CodeAct CardCheck API",
+        "version": "1.0.0",
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "dependencies": {
+            "openai": openai_version,
+            "anthropic": anthropic_version,
+        },
+        "env": {
+            "has_openai_key": bool(os.environ.get("OPENAI_API_KEY")),
+            "has_anthropic_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
+            "has_openrouter_key": bool(os.environ.get("OPENROUTER_API_KEY")),
+        }
+    }
+
 def _get_mem_rss_mb() -> float:
     """Return resident memory in MB."""
     try:
@@ -58,6 +97,25 @@ def _get_mem_rss_mb() -> float:
             return (ru / (1024 * 1024)) if ru > (1 << 32) else (ru / 1024.0)
         except Exception:
             return -1.0
+
+def _validate_json_serializable(data: Any, name: str = "data") -> None:
+    """
+    Validate that data is JSON serializable.
+    Raises TypeError if not serializable with helpful error message.
+    """
+    try:
+        # Try to serialize to JSON
+        json.dumps(data)
+    except (TypeError, ValueError) as e:
+        logger.error(f"{name} is not JSON serializable: {e}")
+        # Try to identify the problematic field
+        if isinstance(data, dict):
+            for key, value in data.items():
+                try:
+                    json.dumps(value)
+                except Exception:
+                    logger.error(f"  Field '{key}' is not JSON serializable: {type(value)}")
+        raise TypeError(f"{name} contains non-JSON-serializable data: {e}")
 
 class VerifyRequest(BaseModel):
     """Request model for verification."""
@@ -154,9 +212,13 @@ async def verify(verify_request: VerifyRequest, request: Request) -> VerifyRespo
                 output_dir=str(Path(tmpdir) / "reports"),
             )
 
+            # Ensure report is JSON serializable
+            _validate_json_serializable(report, "verification report")
+            
             return VerifyResponse(success=True, report=report)
 
     except Exception as e:
+        logger.error(f"Verification failed: {e}", {"error": str(e)})
         return VerifyResponse(success=False, error=str(e))
 
 
@@ -210,8 +272,8 @@ async def verify_stream(verify_request: VerifyRequest, request: Request):
                     yield f"data: {json.dumps({'type': 'error', 'message': 'Either repo_url or repo_path must be provided'})}\n\n"
                     return
 
-                # Shared state for progress updates
-                progress_queue = queue.Queue()
+                # Shared state for progress updates (bounded queue to prevent memory buildup)
+                progress_queue = queue.Queue(maxsize=100)
                 report_result = {'report': None, 'error': None, 'done': False}
 
                 def _sanitize_progress_data(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -241,13 +303,15 @@ async def verify_stream(verify_request: VerifyRequest, request: Request):
                     """Callback to queue progress updates."""
                     try:
                         small_data = _sanitize_progress_data(data or {})
+                        # Try to put with timeout to avoid blocking verification thread
                         progress_queue.put({
                             'type': 'progress',
                             'message': message,
                             'data': small_data
-                        }, block=False)
-                    except:
-                        pass  # Queue full, skip
+                        }, block=True, timeout=0.1)
+                    except queue.Full:
+                        # Queue is full (client is slow), skip this update to avoid blocking
+                        pass
 
                 def run_verification():
                     try:
@@ -313,9 +377,16 @@ async def verify_stream(verify_request: VerifyRequest, request: Request):
                     except Exception as e:
                         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
                         break
+                
+                # Force garbage collection after streaming completes
+                logger.info(f"[MEM] Before cleanup RSS={_get_mem_rss_mb():.1f} MB")
+                gc.collect()
+                logger.info(f"[MEM] After cleanup RSS={_get_mem_rss_mb():.1f} MB")
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            # Cleanup on error too
+            gc.collect()
 
     return StreamingResponse(
         generate(),
@@ -388,20 +459,22 @@ async def verify_codeact_stream(verify_request: VerifyRequest, request: Request)
                     yield f"data: {json.dumps({'type': 'error', 'message': 'Either repo_url or repo_path must be provided'})}\n\n"
                     return
 
-                # Shared state for progress updates
-                progress_queue = queue.Queue()
+                # Shared state for progress updates (bounded queue to prevent memory buildup)
+                progress_queue = queue.Queue(maxsize=50)
                 report_result = {'report': None, 'error': None, 'done': False}
 
                 def progress_callback(message: str, data: Dict[str, Any]):
                     """Callback to queue progress updates."""
                     try:
+                        # Try to put with timeout to avoid blocking verification thread
                         progress_queue.put({
                             'type': 'progress',
                             'message': message,
                             'data': data
-                        }, block=False)
-                    except:
-                        pass  # Queue full, skip
+                        }, block=True, timeout=0.1)
+                    except queue.Full:
+                        # Queue is full (client is slow), skip this update to avoid blocking
+                        pass
 
                 def run_verification():
                     try:
@@ -438,9 +511,13 @@ async def verify_codeact_stream(verify_request: VerifyRequest, request: Request)
                             if update['type'] == 'done':
                                 # Send final report
                                 yield f"data: {json.dumps({'type': 'complete', 'report': report_result['report']})}\n\n"
+                                # Give client time to receive final message before closing
+                                await asyncio.sleep(0.1)
                                 break
                             elif update['type'] == 'error':
                                 yield f"data: {json.dumps({'type': 'error', 'message': update.get('message', 'Unknown error')})}\n\n"
+                                # Give client time to receive error message before closing
+                                await asyncio.sleep(0.1)
                                 break
                             else:
                                 # Send progress update
@@ -452,16 +529,24 @@ async def verify_codeact_stream(verify_request: VerifyRequest, request: Request)
                                     yield f"data: {json.dumps({'type': 'error', 'message': report_result['error']})}\n\n"
                                 elif report_result['report']:
                                     yield f"data: {json.dumps({'type': 'complete', 'report': report_result['report']})}\n\n"
+                                # Give client time to receive final message before closing
+                                await asyncio.sleep(0.1)
                                 break
                             # Yield a keep-alive ping (throttled to reduce network traffic)
                             yield f": keep-alive\n\n"
                             await asyncio.sleep(1.0)
                     except Exception as e:
                         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+                        await asyncio.sleep(0.1)
                         break
+                
+                # Force garbage collection after streaming completes
+                gc.collect()
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            # Cleanup on error too
+            gc.collect()
 
     return StreamingResponse(
         generate(),

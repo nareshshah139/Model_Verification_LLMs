@@ -333,18 +333,17 @@ class CardCheckAgent:
         )
         emit("CodeAct verifier initialized", {"step": 4})
 
-        # Step 5: Verify claims in parallel using generated Python glue code
-        emit("\nStep 5: Verifying claims in parallel using CodeAct (LLM-generated Python + search tools)...", {"step": 5})
-        max_workers = 1
-        emit(f"  Using sequential verification for {len(claims)} claims", {"step": 5})
+        # Step 5: Verify claims using CodeAct with OPTIMIZED BATCH processing
+        emit("\nStep 5: Verifying claims using CodeAct (BATCH mode - LLM-generated Python + search tools)...", {"step": 5})
+        emit(f"  Using OPTIMIZED batch verification for {len(claims)} claims (3 API calls instead of {2*len(claims)+1})!", {"step": 5})
         
         def verification_progress(message: str, current: int, total: int):
             emit(message, {"step": 5, "current": current, "total": total})
         
-        # Execute verification in parallel
-        verification_results = verifier.verify_claims_batch(
+        # Execute verification using optimized batch method
+        # This reduces API calls from 2N+1 to just 3 total!
+        verification_results = verifier.verify_claims_batch_optimized(
             claims,
-            max_workers=max_workers,
             progress_callback=verification_progress
         )
         

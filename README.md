@@ -45,76 +45,67 @@ This is a monorepo containing:
 pnpm install
 ```
 
-### 2. Configure Environment Variables
+### 2. Configure Environment Variables (Unified Configuration)
 
-**Quick Setup:**
+This project uses a **single centralized `.env` file** at the project root that both frontend and backend share.
 
-```bash
-cd apps/api
-bash create_env.sh  # Creates .env.local with placeholders
-```
-
-Then edit `apps/api/.env.local` and add your API keys:
+**Quick Setup (Recommended):**
 
 ```bash
-# Choose your LLM provider
-LLM_PROVIDER=anthropic  # or openai, openrouter
-LLM_MODEL=claude-sonnet-4-5
-
-# Add your API key (get from provider's website)
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-# OR
-# OPENAI_API_KEY=sk-your-key-here
-# OR
-# OPENROUTER_API_KEY=sk-or-your-key-here
-
-# CodeAct API Server URL
-CODEACT_API_URL=http://localhost:8001
+# Run interactive setup script
+./setup-env.sh
 ```
 
-📖 **For detailed setup instructions, see [ENV_SETUP_GUIDE.md](./ENV_SETUP_GUIDE.md)**
+This will create `.env` and prompt you for your API keys.
+
+**Manual Setup:**
+
+```bash
+# Copy template and edit
+cp env.config.template .env
+# Then edit .env and add your API keys
+```
+
+📖 **For detailed configuration options, see [UNIFIED_ENV_CONFIG.md](./UNIFIED_ENV_CONFIG.md)**
 
 **Get API Keys:**
 - Anthropic: https://console.anthropic.com/
 - OpenAI: https://platform.openai.com/api-keys
 - OpenRouter: https://openrouter.ai/keys
 
-### 3. Start CodeAct API Server
+### 3. Start Services
 
-**Important**: The CodeAct API server must be started with the virtual environment activated:
+**Option A: Start All Services (Recommended)**
 
+From the project root:
+
+```bash
+./start-all-services.sh
+```
+
+This script will:
+- Verify your `.env` configuration
+- Start the Python backend (CodeAct API)
+- Start the Next.js frontend
+- Show you when both are ready
+
+**Option B: Start Services Individually**
+
+Terminal 1 - Backend:
 ```bash
 cd services/codeact_cardcheck
-
-# Activate virtual environment
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies if not already installed
-pip install -e .
-
-# Start the API server
-python api_server.py
+./start_api_server.sh  # Automatically loads root .env
 ```
 
-Or use the convenience script:
+Terminal 2 - Frontend:
 ```bash
-cd services/codeact_cardcheck
-./start_api_server.sh
+cd apps/api
+pnpm dev  # Automatically loads root .env
 ```
 
-The service runs on `http://localhost:8001` by default.
-
-**Note**: If you see errors about missing packages (like `openai`), make sure the virtual environment is activated before starting the server.
-
-### 4. Start Development Server
-
-From the root directory:
-
-```bash
-pnpm dev
-```
-
-This starts the Next.js application on http://localhost:3001
+The services run on:
+- Backend: http://localhost:8001
+- Frontend: http://localhost:3001
 
 ## Usage
 

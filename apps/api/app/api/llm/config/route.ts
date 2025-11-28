@@ -1,24 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { 
   getLLMConfig, 
-  setRuntimeLLMConfig, 
   getAvailableModels,
-  type LLMConfig,
   type LLMProvider 
 } from "@/src/lib/llm-config";
 
 /**
  * GET /api/llm/config
- * Returns current LLM configuration (without API keys for security)
+ * Returns current LLM configuration from .env (read-only status)
+ * Never exposes actual API keys for security
  */
 export async function GET() {
   try {
     const config = getLLMConfig();
     
-    // Never send API keys to the client
+    // Check if API key exists for the current provider
+    let hasApiKey = false;
+    if (config.provider === "openai") {
+      hasApiKey = Boolean(process.env.OPENAI_API_KEY);
+    } else if (config.provider === "anthropic") {
+      hasApiKey = Boolean(process.env.ANTHROPIC_API_KEY);
+    } else if (config.provider === "openrouter") {
+      hasApiKey = Boolean(process.env.OPENROUTER_API_KEY);
+    }
+    
+    // Never send actual API keys to the client
     return NextResponse.json({
       provider: config.provider,
       model: config.model,
+      hasApiKey, // Just a boolean indicator
       availableModels: {
         openai: getAvailableModels("openai"),
         anthropic: getAvailableModels("anthropic"),
@@ -32,9 +42,11 @@ export async function GET() {
         error: error instanceof Error ? error.message : "Failed to get configuration",
         provider: "openai",
         model: "gpt-4o-mini",
+        hasApiKey: false,
         availableModels: {
           openai: getAvailableModels("openai"),
           anthropic: getAvailableModels("anthropic"),
+          openrouter: getAvailableModels("openrouter"),
         },
       },
       { status: 200 } // Return 200 with defaults instead of error
@@ -44,120 +56,32 @@ export async function GET() {
 
 /**
  * POST /api/llm/config
- * Updates LLM configuration at runtime
+ * DEPRECATED: Configuration is now managed via .env file
+ * This endpoint is kept for backward compatibility but returns an informative message
  */
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { provider, model, apiKey } = body as Partial<LLMConfig>;
-
-    // Validate provider
-    if (!provider || (provider !== "openai" && provider !== "anthropic" && provider !== "openrouter")) {
-      return NextResponse.json(
-        { error: "Invalid provider. Must be 'openai', 'anthropic', or 'openrouter'" },
-        { status: 400 }
-      );
-    }
-
-    // Validate model
-    if (!model) {
-      return NextResponse.json(
-        { error: "Model is required" },
-        { status: 400 }
-      );
-    }
-
-    const availableModels = getAvailableModels(provider);
-    if (!availableModels.includes(model)) {
-      return NextResponse.json(
-        { 
-          error: `Invalid model for ${provider}. Available models: ${availableModels.join(", ")}` 
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate API key if provided
-    if (apiKey) {
-      if (provider === "openai" && !apiKey.startsWith("sk-")) {
-        return NextResponse.json(
-          { error: "Invalid OpenAI API key format. Should start with 'sk-'" },
-          { status: 400 }
-        );
-      }
-      if (provider === "anthropic" && !apiKey.startsWith("sk-ant-")) {
-        return NextResponse.json(
-          { error: "Invalid Anthropic API key format. Should start with 'sk-ant-'" },
-          { status: 400 }
-        );
-      }
-      if (provider === "openrouter" && !apiKey.startsWith("sk-")) {
-        return NextResponse.json(
-          { error: "Invalid OpenRouter API key format. Should start with 'sk-'" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Set runtime configuration
-    const config: LLMConfig = {
-      provider,
-      model,
-      ...(apiKey && { apiKey }),
-    };
-
-    setRuntimeLLMConfig(config);
-
-    // Store in environment for persistence (optional - for server restarts)
-    // Note: This only works in development or with custom server setup
-    if (apiKey) {
-      if (provider === "openai") {
-        process.env.OPENAI_API_KEY = apiKey;
-      } else if (provider === "anthropic") {
-        process.env.ANTHROPIC_API_KEY = apiKey;
-      } else if (provider === "openrouter") {
-        process.env.OPENROUTER_API_KEY = apiKey;
-      }
-    }
-    process.env.LLM_PROVIDER = provider;
-    process.env.LLM_MODEL = model;
-
-    return NextResponse.json({
-      success: true,
-      message: "LLM configuration updated successfully",
-      config: {
-        provider,
-        model,
-      },
-    });
-  } catch (error) {
-    console.error("Failed to update LLM config:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update configuration" },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(
+    { 
+      error: "Configuration is now managed via .env file. " +
+             "Please edit the .env file at the project root and restart services. " +
+             "See UNIFIED_ENV_CONFIG.md for details."
+    },
+    { status: 400 }
+  );
 }
 
 /**
  * DELETE /api/llm/config
- * Resets to environment variable configuration
+ * DEPRECATED: Configuration is now managed via .env file
  */
 export async function DELETE() {
-  try {
-    // This would clear runtime config and revert to env vars
-    // For now, we can just return success
-    return NextResponse.json({
-      success: true,
-      message: "Configuration reset to environment defaults",
-    });
-  } catch (error) {
-    console.error("Failed to reset LLM config:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to reset configuration" },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(
+    { 
+      error: "Configuration is now managed via .env file. " +
+             "Please edit the .env file at the project root and restart services."
+    },
+    { status: 400 }
+  );
 }
 
 

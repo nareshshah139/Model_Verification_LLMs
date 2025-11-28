@@ -1,0 +1,216 @@
+{
+  "metadata": {
+    "batch_name": "Claims 160-179",
+    "total_claims": 20,
+    "workspace_path": "/Users/nshah/Documents/AST-RAG-Based-Model-Card-Checks/Lending-Club-Credit-Scoring",
+    "notebooks": [
+      "notebooks/1_data_cleaning_understanding.ipynb",
+      "notebooks/2_eda.ipynb",
+      "notebooks/3_pd_modeling.ipynb",
+      "notebooks/4_lgd_ead_modeling.ipynb",
+      "notebooks/5_pd_model_monitoring.ipynb"
+    ]
+  },
+  "results": [
+    {
+      "claim_id": "claim_160",
+      "claim_description": "Model cannot be used in violation of fair lending laws and must avoid protected-class proxies.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_161",
+      "claim_description": "Model is validated for U.S. 50 states only, not U.S. territories or international markets.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_162",
+      "claim_description": "Model is valid only for fixed-rate unsecured personal loans with terms 36 or 60 months.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_163",
+      "claim_description": "Model outputs are recommendations, not final decisions; manual overrides and policy rules are required.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_164",
+      "claim_description": "Model underpredicts portfolio EL by about 0.38% to 0.51%; mitigation includes portfolio-level calibration (+40 bps) and overlays.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_165",
+      "claim_description": "Small business loans have higher prediction error (1.2%); mitigation includes risk premium, potential separate model, stricter approvals, and enhanced manual review.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_166",
+      "claim_description": "Performance degradation over time (PD AUC decline) is observed; mitigation includes quarterly AUC and PSI monitoring and planned annual refresh.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_167",
+      "claim_description": "F grade tail risk is poorly estimated due to limited volume; mitigation includes conservative policy, pricing premiums, manual review, and possibly removing F from approvals.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_168",
+      "claim_description": "Missing data (e.g., months since last delinquency 48.4% missing) may introduce bias; mitigation includes sensitivity analysis and separate monitoring of missing segments.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_169",
+      "claim_description": "No macro scenario capability; mitigation includes separate macro overlay framework and management overlays for CECL.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_170",
+      "claim_description": "Internal validation was performed by the development team during model construction in October 2025.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_171",
+      "claim_description": "Independent validation has NOT yet been performed; required before production use.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_172",
+      "claim_description": "Independent validator must be separate from model development and have credit risk expertise.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_173",
+      "claim_description": "Validation scope includes conceptual soundness, data quality, performance, implementation, documentation, model risk, and monitoring plan.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_174",
+      "claim_description": "Planned validation timeline: independent validation start November 2025; report January 2026; committee review February 2026; potential production approval March 2026.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_175",
+      "claim_description": "Outcomes analysis will be performed after 12+ months of production use and then quarterly and annually thereafter.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_176",
+      "claim_description": "Benchmark comparison claims current model outperforms previous model on PD AUC (0.688 vs 0.665) and on LGD/EAD/EL MAE.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_177",
+      "claim_description": "Model is designed for Python 3.9+ and tested on Python 3.10.x and 3.11.x.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_178",
+      "claim_description": "Core dependencies include numpy, pandas, scikit-learn, scipy, joblib, matplotlib, seaborn, openpyxl, xlsxwriter, python-dateutil, pytz, typing-extensions.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    },
+    {
+      "claim_id": "claim_179",
+      "claim_description": "Container environment uses python:3.10.12-slim-bullseye on Debian 11 with Docker and optionally Kubernetes.",
+      "verification_status": "error",
+      "confidence_score": 0.0,
+      "evidence_found": [],
+      "verification_notes": "API Error: 404 - {\"detail\":\"Not Found\"}",
+      "code_references": [],
+      "contradictions": []
+    }
+  ]
+}

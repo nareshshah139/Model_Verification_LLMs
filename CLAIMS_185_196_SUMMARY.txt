@@ -1,0 +1,226 @@
+================================================================================
+VERIFICATION SUMMARY: CLAIMS 185-196
+Date: November 17, 2025
+Batch Number: 9
+Claims Range: Runtime Environment, Glossary, and Metric Definitions
+================================================================================
+
+OVERVIEW:
+Total Claims Verified: 12 (claims 185-196)
+- Verified: 8 claims (66.7%)
+- Insufficient Evidence: 4 claims (33.3%)
+
+VERIFICATION RESULTS BY CLAIM:
+
+────────────────────────────────────────────────────────────────────────────
+INSUFFICIENT EVIDENCE (4 claims)
+────────────────────────────────────────────────────────────────────────────
+
+Claim 185: Security Practices
+- Status: INSUFFICIENT_EVIDENCE (confidence: 0.0)
+- Description: Security practices include no secrets in code, dependency 
+  vulnerability scans, and encryption at rest in production.
+- Finding: No evidence found in the 5 Jupyter notebooks. Security practices, 
+  vulnerability scans, and encryption configurations are infrastructure/
+  deployment concerns not typically documented in modeling notebooks.
+- Expected Location: DevOps documentation, CI/CD pipelines, or 
+  infrastructure-as-code repositories.
+
+Claim 186: Monitoring and Logging
+- Status: INSUFFICIENT_EVIDENCE (confidence: 0.0)
+- Description: Monitoring and logging use Python logging with structured JSON, 
+  Prometheus metrics, and optional APM tools.
+- Finding: No evidence found. While Python logging imports are present, there 
+  is no implementation of structured JSON logging, Prometheus metrics exporters, 
+  or APM tool integration. These are production infrastructure concerns 
+  implemented in deployed application code, not research notebooks.
+
+Claim 187: Versioning Scheme
+- Status: INSUFFICIENT_EVIDENCE (confidence: 0.0)
+- Description: Versioning follows semantic-like scheme: major for redevelopment, 
+  minor for recalibration or feature changes, patch for documentation/bug fixes.
+- Finding: No evidence of versioning scheme found in notebooks. Model versioning 
+  and release management would typically be documented in model governance 
+  documentation, deployment pipelines, or model registry systems.
+
+Claim 188: Artifact Storage (MRM System)
+- Status: INSUFFICIENT_EVIDENCE (confidence: 0.2)
+- Description: All artifacts are stored in a centralized MRM system with 
+  access control and audit trail.
+- Finding: Limited evidence - artifacts are saved to local file system paths 
+  in an 'artifacts' directory structure. No evidence of centralized MRM 
+  (Model Risk Management) system, access control mechanisms, or audit trail 
+  functionality. Enterprise MRM systems with ACLs and audit logging would be 
+  separate infrastructure.
+- Partial Evidence: Local artifact storage paths found in notebooks 3 and 4.
+
+────────────────────────────────────────────────────────────────────────────
+VERIFIED CLAIMS (8 claims)
+────────────────────────────────────────────────────────────────────────────
+
+Claim 189: AUC Definition and Threshold ✓
+- Status: VERIFIED (confidence: 0.92)
+- Description: AUC is a discrimination metric between 0 and 1; >0.70 considered 
+  strong for credit models.
+- Evidence:
+  * AUC explicitly defined as discrimination metric (0-1 range)
+  * Test AUC of 0.70 described as "satisfactory performance" and "effective 
+    discriminatory power"
+  * Aligns with standard credit risk modeling practice
+- Source: notebooks/3_pd_modeling.ipynb (Cells 45, 50, 51)
+
+Claim 190: Gini Formula ✓
+- Status: VERIFIED (confidence: 0.98)
+- Description: Gini = 2 × AUC − 1
+- Evidence:
+  * Formula explicitly stated: Gini = 2 × ROC-AUC - 1
+  * Numerical verification: AUC = 0.70, Gini = 0.40 (confirms 2*0.70-1=0.40)
+  * Documentation states Gini measures inequality between good/bad borrowers
+- Source: notebooks/3_pd_modeling.ipynb (Cells 45, 50)
+
+Claim 191: KS Statistic Definition ✓
+- Status: VERIFIED (confidence: 0.98)
+- Description: KS statistic measures maximum separation between CDFs of goods 
+  and bads.
+- Evidence:
+  * Explicitly defined as "maximum vertical distance between cumulative 
+    distribution functions"
+  * Mathematical formula provided: KS = max[F_b(k) - F_g(k)]
+  * F_b and F_g formulas for bad and good borrower CDFs documented
+- Source: notebooks/3_pd_modeling.ipynb (Cell 45)
+
+Claim 192: PD Time Horizon ✓
+- Status: VERIFIED (confidence: 0.90)
+- Description: PD is probability of default within specified time horizon 
+  (12 months here).
+- Evidence:
+  * PD defined as probability of default within a time horizon
+  * 12-month horizon implied by regulatory context (Basel checks for one year)
+  * Time-bound nature of default definition established
+- Note: 12-month horizon not explicitly stated but strongly implied by context
+- Source: notebooks/1_data_cleaning_understanding.ipynb (Cell 1)
+
+Claim 193: LGD Formula ✓
+- Status: VERIFIED (confidence: 0.98)
+- Description: LGD is percentage of exposure not recovered after default; 
+  LGD = 1 − Recovery Rate.
+- Evidence:
+  * Formula explicitly stated: LGD = 1 - Recovery Rate
+  * Documented in multiple notebooks
+  * Recovery rate calculated as recoveries / funded_amnt
+  * Complementary relationship clearly explained
+- Source: notebooks/1_data_cleaning_understanding.ipynb (Cells 34, 50),
+         notebooks/4_lgd_ead_modeling.ipynb (Cell 12)
+
+Claim 194: EAD Definition ✓
+- Status: VERIFIED (confidence: 0.95)
+- Description: EAD is outstanding balance at time of default.
+- Evidence:
+  * EAD defined as total value/outstanding balance lender is exposed to at 
+    default
+  * Implementation: EAD = Total Funded Amount × Credit Conversion Factor
+  * CCF represents outstanding proportion at default
+  * Definition matches standard credit risk practice
+- Source: notebooks/1_data_cleaning_understanding.ipynb (Cells 1, 34),
+         notebooks/4_lgd_ead_modeling.ipynb (Cell 12)
+
+Claim 195: CCF Definition ✓
+- Status: VERIFIED (confidence: 0.96)
+- Description: CCF is proportion of committed exposure expected to be 
+  outstanding at default.
+- Evidence:
+  * CCF defined as "outstanding proportion of funded amount when default occurs"
+  * Formula: CCF = (funded_amnt - total_rec_prncp) / funded_amnt
+  * Average CCF: 73.6%, range: 63.2%-88.8% (50th percentile)
+  * Calculates proportion of original commitment remaining at default
+- Source: notebooks/1_data_cleaning_understanding.ipynb (Cells 34, 52),
+         notebooks/4_lgd_ead_modeling.ipynb (Cell 13)
+
+Claim 196: PSI for Drift Detection ✓
+- Status: VERIFIED (confidence: 0.98)
+- Description: PSI is used for population stability and drift detection.
+- Evidence:
+  * Entire notebook dedicated to PSI-based model monitoring
+  * PSI explicitly documented for identifying population differences
+  * Formula provided with interpretation thresholds:
+    - PSI < 0.1: Little to no difference
+    - 0.1 < PSI < 0.25: Slight difference (no action)
+    - PSI ≥ 0.25: Substantial difference (action required)
+  * Practical implementation: Compared training data (2007-2014) vs. 
+    new data (2015)
+  * Credit scores showed PSI of 0.19, indicating need for potential 
+    model redevelopment
+  * PSI calculated for all features and credit scores
+- Source: notebooks/5_pd_model_monitoring.ipynb (Cells 0, 28-32)
+
+────────────────────────────────────────────────────────────────────────────
+KEY FINDINGS
+────────────────────────────────────────────────────────────────────────────
+
+STRENGTHS:
+1. Glossary Definitions: All 8 glossary/metric definition claims (189-196) are 
+   verified with strong evidence. Definitions align with standard credit risk 
+   modeling practice.
+
+2. Comprehensive Documentation: PSI implementation particularly well-documented 
+   with formula, thresholds, and practical application for drift detection.
+
+3. Mathematical Verification: Gini formula numerically verified (Gini = 0.40 
+   matches 2*0.70-1).
+
+GAPS:
+1. Infrastructure Claims: Claims 185-188 relate to production infrastructure, 
+   security, and governance systems that are outside the scope of modeling 
+   notebooks.
+
+2. Documentation Location: Security practices, monitoring infrastructure, 
+   versioning schemes, and MRM systems would be documented in:
+   - DevOps/deployment documentation
+   - CI/CD pipeline configurations
+   - Model governance frameworks
+   - Infrastructure-as-code repositories
+   - Model registry systems
+
+RECOMMENDATIONS:
+1. For Infrastructure Claims (185-188): Verify against:
+   - Deployment documentation and CI/CD pipeline configs
+   - Security policy documents
+   - Model governance framework documentation
+   - MRM system documentation and access logs
+
+2. For Model Card Accuracy:
+   - All glossary definitions (claims 189-196) are accurately stated
+   - No corrections needed for these claims
+
+────────────────────────────────────────────────────────────────────────────
+UPDATED STATISTICS (After Batch 9)
+────────────────────────────────────────────────────────────────────────────
+
+Total Claims in Verification File: 177
+- Verified: 102 (57.6%)
+- Partially Verified: 25 (14.1%)
+- Not Verified: 22 (12.4%)
+- Insufficient Evidence: 28 (15.8%)
+- Verified with Discrepancy: 0 (0.0%)
+
+Batches Completed: 9
+Latest Batch (185-196): Runtime environment, glossary, and metric definition 
+claims verified from 5 Jupyter notebooks.
+
+────────────────────────────────────────────────────────────────────────────
+CONCLUSION
+────────────────────────────────────────────────────────────────────────────
+
+Claims 185-196 show a clear split between infrastructure/governance claims 
+(185-188) that cannot be verified from modeling notebooks, and glossary/
+definition claims (189-196) that are fully verified with strong evidence.
+
+All metric definitions (AUC, Gini, KS, PD, LGD, EAD, CCF, PSI) are accurately 
+documented and align with standard credit risk modeling practice. The PSI 
+implementation for drift detection is particularly comprehensive.
+
+For complete verification of infrastructure claims 185-188, additional 
+documentation sources (deployment docs, security policies, MRM system docs) 
+would be required.
+
+================================================================================

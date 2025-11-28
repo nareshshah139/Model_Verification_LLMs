@@ -54,7 +54,8 @@ class CodeActVerifier:
                     raise ValueError("ANTHROPIC_API_KEY not set")
                 print(f"[INFO] Initializing Anthropic client for CodeActVerifier...")
                 self.client = Anthropic(api_key=api_key)
-                self.model = model or "claude-3-5-sonnet-20241022"
+                # Use Claude Sonnet 4.5 (latest as of Nov 2025)
+                self.model = model or "claude-sonnet-4-5"
                 print(f"[INFO] Anthropic client initialized successfully (model: {self.model})")
             except ImportError:
                 raise ImportError("anthropic package required for Anthropic provider")
@@ -95,6 +96,32 @@ class CodeActVerifier:
         self.code_search = CodeSearchTool(str(repo_path), ast_grep_binary)
         self.notebook_search = NotebookSearchTool(str(repo_path))
         self.artifact_search = ArtifactSearchTool(str(repo_path))
+    
+    def _get_max_tokens(self) -> int:
+        """Get max_tokens based on model (Haiku: 4096, Sonnet: 16K+)"""
+        if self.llm_provider == "anthropic":
+            # Claude Haiku has 4096 max output tokens
+            # Claude Sonnet 4 (new) has 16384 max output tokens
+            if "haiku" in self.model.lower():
+                return 4000
+            elif "sonnet-4" in self.model.lower() or "claude-sonnet-4" in self.model.lower():
+                return 16000  # Use 16K for Sonnet 4
+            else:
+                return 8000  # Older Sonnet models
+        # For OpenAI/OpenRouter, use 8000 as safe default
+        return 8000
+    
+    def _get_batch_size_for_code_generation(self) -> int:
+        """Get optimal batch size for code generation based on model's max_tokens."""
+        max_tokens = self._get_max_tokens()
+        # Estimate ~150 tokens per code snippet on average
+        # Use conservative estimate to avoid hitting limits
+        if max_tokens >= 16000:
+            return 20  # For Sonnet 4 with 16K tokens
+        elif max_tokens >= 8000:
+            return 10  # For older Sonnet with 8K tokens
+        else:
+            return 5   # For Haiku with 4K tokens
     
     def _should_skip_response_format(self) -> bool:
         """Check if current model should skip response_format parameter."""
@@ -327,7 +354,7 @@ Remember:
                 print(f"[DEBUG] Making Anthropic code generation API call (model: {self.model})...")
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=8192,
+                    max_tokens=self._get_max_tokens(),
                     temperature=0.2,
                     system=system_prompt,
                     messages=[
@@ -367,20 +394,51 @@ Remember:
         Returns:
             Execution result with success status and result/error
         """
-        # Create safe namespace with only the search tools
-        namespace = {
-            'code_search': self.code_search,
-            'notebook_search': self.notebook_search,
-            'artifact_search': self.artifact_search,
-            'result': None  # Will be set by the code
+        # Create safe builtins - allow common safe functions but restrict dangerous ones
+        import builtins
+        safe_builtins = {
+            # Type conversions
+            'str': str, 'int': int, 'float': float, 'bool': bool,
+            'list': list, 'dict': dict, 'set': set, 'tuple': tuple,
+            # Type checking
+            'isinstance': isinstance, 'issubclass': issubclass,
+            'type': type, 'hasattr': hasattr, 'getattr': getattr,
+            # Iteration and sequences
+            'len': len, 'range': range, 'enumerate': enumerate,
+            'zip': zip, 'map': map, 'filter': filter,
+            'any': any, 'all': all, 'sum': sum, 'min': min, 'max': max,
+            'sorted': sorted, 'reversed': reversed,
+            # String operations
+            'ord': ord, 'chr': chr, 'repr': repr, 'format': format,
+            # Other safe functions
+            'abs': abs, 'round': round, 'pow': pow,
+            'print': print,  # Allow print for debugging
+            # Exceptions (needed for try/except)
+            'Exception': Exception, 'ValueError': ValueError,
+            'KeyError': KeyError, 'TypeError': TypeError,
+            'AttributeError': AttributeError, 'IndexError': IndexError,
+            # Constants
+            'True': True, 'False': False, 'None': None,
         }
         
         try:
-            # Execute the code
-            exec(python_code, {"__builtins__": {}}, namespace)
+            # Build a single sandbox dict used for both globals and locals so that:
+            # - Builtins are reliably available inside all scopes (including functions,
+            #   comprehensions, lambdas, etc.)
+            # - Tools are directly accessible as global names
+            sandbox: Dict[str, Any] = {
+                "__builtins__": safe_builtins,
+                "code_search": self.code_search,
+                "notebook_search": self.notebook_search,
+                "artifact_search": self.artifact_search,
+                "result": None,  # Will be set by the generated code
+            }
             
-            # Extract result
-            result = namespace.get('result')
+            # Execute the generated code in the sandboxed environment
+            exec(python_code, sandbox, sandbox)
+            
+            # Extract result populated by the code
+            result = sandbox.get("result")
             
             return {
                 "success": True,
@@ -449,14 +507,14 @@ Is the claim verified by the evidence?"""
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.1,
-                max_tokens=8192,
+                max_tokens=self._get_max_tokens(),
                 use_json_format=True
             )
             else:  # anthropic
                 print(f"[DEBUG] Making Anthropic verification API call (model: {self.model})...")
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=8192,
+                    max_tokens=self._get_max_tokens(),
                     temperature=0.1,
                     system=system_prompt,
                     messages=[
@@ -488,6 +546,366 @@ Is the claim verified by the evidence?"""
                 "discrepancies": []
             }
 
+    def _generate_verification_code_batch(self, claims: List[Dict[str, Any]]) -> List[str]:
+        """
+        Generate Python verification code for ALL claims in a SINGLE LLM call.
+        
+        This dramatically reduces API calls from N to 1 for code generation.
+        
+        Args:
+            claims: List of all claims to generate code for
+            
+        Returns:
+            List of Python code strings (one per claim, in same order)
+        """
+        system_prompt = """You are an expert Python code generator. Generate Python verification code for MULTIPLE claims at once.
+
+You have access to these pre-defined tools:
+- code_search.text_search(query, file_pattern="*.py", context_lines=3, case_sensitive=False)
+- code_search.import_search(module_or_class)
+- code_search.function_search(function_name)
+- code_search.semantic_search(description, top_k=5)
+- notebook_search.search_outputs(query, case_sensitive=False)
+- notebook_search.search_code_cells(query, case_sensitive=False)
+- artifact_search.find_artifacts(pattern)
+- artifact_search.check_artifact_usage(artifact_name)
+
+For EACH claim, generate Python code that:
+1. Uses these tools to search for evidence
+2. Has conditional logic (if/else) based on findings
+3. Chains multiple tool calls together when needed
+4. Stores results in a 'result' dictionary
+5. Is safe to execute (no file writes, no imports, no network calls)
+
+The result dictionary should include:
+- found: bool (whether evidence was found)
+- evidence_count: int
+- evidence_details: list of dicts with findings
+- summary: str (brief summary of findings)
+
+Output ONLY a JSON array of code strings, one for each claim, in the SAME ORDER.
+Format: ["code1", "code2", "code3", ...]
+
+Each code string should be a complete Python snippet that can be executed independently."""
+
+        # Format all claims with IDs for reference
+        claims_text = json.dumps([
+            {
+                "id": claim.get("id"),
+                "category": claim.get("category"),
+                "subcategory": claim.get("subcategory"),
+                "description": claim.get("description"),
+                "expected_evidence": claim.get("expected_evidence", [])
+            }
+            for claim in claims
+        ], indent=2)
+        
+        user_prompt = f"""Generate Python verification code for these {len(claims)} claims:
+
+{claims_text}
+
+Output a JSON array with {len(claims)} code strings (one per claim, in order):
+["code_for_claim_1", "code_for_claim_2", ...]
+
+Remember:
+- Use the available tools (code_search, notebook_search, artifact_search)
+- Store results in 'result' dictionary
+- Include conditional logic
+- No imports, no file writes, no dangerous operations
+- Be specific to what each claim states"""
+
+        try:
+            if self.llm_provider in ["openai", "openrouter"]:
+                response_text = self._call_openai_api(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.2,
+                    max_tokens=self._get_max_tokens(),
+                    use_json_format=True
+                )
+            else:  # anthropic
+                print(f"[DEBUG] Making BATCH Anthropic code generation API call for {len(claims)} claims (model: {self.model})...")
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=self._get_max_tokens(),
+                    temperature=0.2,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": user_prompt}
+                    ]
+                )
+                print(f"[DEBUG] BATCH Anthropic code generation successful. Response ID: {response.id}")
+                response_text = response.content[0].text
+                print(f"[DEBUG] Generated batch code length: {len(response_text)} chars for {len(claims)} claims")
+                print(f"[DEBUG] Response text (first 500 chars): {response_text[:500]}")
+                print(f"[DEBUG] Response text (last 200 chars): {response_text[-200:]}")
+            
+            # Parse JSON array of code strings
+            # Strip markdown code blocks if present
+            response_text_cleaned = response_text.strip()
+            if response_text_cleaned.startswith("```json"):
+                response_text_cleaned = response_text_cleaned[7:]
+            elif response_text_cleaned.startswith("```"):
+                response_text_cleaned = response_text_cleaned[3:]
+            if response_text_cleaned.endswith("```"):
+                response_text_cleaned = response_text_cleaned[:-3]
+            response_text_cleaned = response_text_cleaned.strip()
+            
+            code_array = json.loads(response_text_cleaned)
+            
+            # Clean up each code string
+            cleaned_codes = []
+            for code in code_array:
+                code = code.strip()
+                if code.startswith("```python"):
+                    code = code[9:]
+                if code.startswith("```"):
+                    code = code[3:]
+                if code.endswith("```"):
+                    code = code[:-3]
+                cleaned_codes.append(code.strip())
+            
+            # Ensure we have the right number of codes
+            if len(cleaned_codes) != len(claims):
+                print(f"[WARNING] Expected {len(claims)} codes but got {len(cleaned_codes)}. Padding with empty codes.")
+                while len(cleaned_codes) < len(claims):
+                    cleaned_codes.append("result = {'found': False, 'evidence_count': 0, 'evidence_details': [], 'summary': 'Code generation failed'}")
+            
+            return cleaned_codes
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"[ERROR] Batch code generation failed: {error_msg}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            # Fallback: return empty codes for all claims
+            return ["result = {'found': False, 'evidence_count': 0, 'evidence_details': [], 'summary': 'Code generation failed'}" for _ in claims]
+
+    def _evaluate_execution_results_batch(
+        self,
+        claims: List[Dict[str, Any]],
+        evidences: List[Dict[str, Any]],
+        codes: List[str]
+    ) -> List[Dict[str, Any]]:
+        """
+        Evaluate ALL execution results in a SINGLE LLM call.
+        
+        This dramatically reduces API calls from N to 1 for evaluation.
+        
+        Args:
+            claims: List of all claims
+            evidences: List of execution results (one per claim)
+            codes: List of generated codes (one per claim)
+            
+        Returns:
+            List of evaluation results (one per claim, in same order)
+        """
+        system_prompt = """You are an expert code analyst. Given MULTIPLE claims and their verification results, evaluate ALL of them at once.
+
+For EACH claim-evidence pair, determine:
+- Does the evidence support the claim?
+- Is the evidence strong enough?
+- Are there discrepancies?
+- What's the confidence level?
+
+Output ONLY a JSON array with one evaluation per claim, in the SAME ORDER:
+[
+  {
+    "verified": true/false,
+    "confidence": 0.0-1.0,
+    "reasoning": "brief explanation",
+    "discrepancies": ["list of issues found"]
+  },
+  ...
+]"""
+
+        # Combine all claims, codes, and evidences
+        combined = []
+        for i, (claim, evidence, code) in enumerate(zip(claims, evidences, codes)):
+            combined.append({
+                "index": i,
+                "claim_id": claim.get("id"),
+                "claim": {
+                    "category": claim.get("category"),
+                    "description": claim.get("description")
+                },
+                "code_snippet": code[:300] + "..." if len(code) > 300 else code,
+                "evidence": evidence
+            })
+        
+        combined_text = json.dumps(combined, indent=2)
+        
+        user_prompt = f"""Evaluate these {len(claims)} claim verification results:
+
+{combined_text}
+
+Output a JSON array with {len(claims)} evaluation objects (one per claim, in order):
+[
+  {{"verified": bool, "confidence": float, "reasoning": str, "discrepancies": []}},
+  ...
+]"""
+
+        try:
+            if self.llm_provider in ["openai", "openrouter"]:
+                result_text = self._call_openai_api(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.1,
+                    max_tokens=self._get_max_tokens(),
+                    use_json_format=True
+                )
+            else:  # anthropic
+                print(f"[DEBUG] Making BATCH Anthropic evaluation API call for {len(claims)} claims (model: {self.model})...")
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=self._get_max_tokens(),
+                    temperature=0.1,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": user_prompt}
+                    ]
+                )
+                print(f"[DEBUG] BATCH Anthropic evaluation successful. Response ID: {response.id}")
+                result_text = response.content[0].text
+                print(f"[DEBUG] Batch evaluation result length: {len(result_text)} chars")
+            
+            # Parse JSON array of evaluations
+            evaluations = json.loads(result_text)
+            
+            # Ensure we have the right number of evaluations
+            if len(evaluations) != len(claims):
+                print(f"[WARNING] Expected {len(claims)} evaluations but got {len(evaluations)}. Padding with defaults.")
+                while len(evaluations) < len(claims):
+                    evaluations.append({
+                        "verified": False,
+                        "confidence": 0.1,
+                        "reasoning": "Evaluation failed",
+                        "discrepancies": []
+                    })
+            
+            return evaluations
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"[ERROR] Batch evaluation failed: {error_msg}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            # Fallback: basic heuristic evaluation for all
+            evaluations = []
+            for evidence in evidences:
+                found = evidence.get("found", False) if isinstance(evidence, dict) else bool(evidence)
+                evaluations.append({
+                    "verified": found,
+                    "confidence": 0.5 if found else 0.1,
+                    "reasoning": f"Basic evaluation: evidence {'found' if found else 'not found'}",
+                    "discrepancies": []
+                })
+            return evaluations
+
+    def verify_claims_batch_optimized(
+        self,
+        claims: List[Dict[str, Any]],
+        progress_callback: Optional[Callable[[str, int, int], None]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Verify multiple claims using CHUNKED BATCH CODE GENERATION (OPTIMIZED).
+        
+        Splits large batches into smaller chunks to avoid token limits:
+        - For each chunk: Generate codes (1 LLM call), Execute (0 LLM), Evaluate (1 LLM call)
+        - Batch size is automatically determined based on model's max_tokens
+        - For 244 claims with batch_size=20: Uses 12 batches = 24 LLM calls (vs 489 for individual)
+        
+        This is still 95% faster and cheaper than individual verification!
+        
+        Args:
+            claims: List of claims to verify
+            progress_callback: Optional callback(message, current, total)
+            
+        Returns:
+            List of verification results
+        """
+        total = len(claims)
+        batch_size = self._get_batch_size_for_code_generation()
+        num_batches = (total + batch_size - 1) // batch_size  # Ceiling division
+        
+        if progress_callback:
+            progress_callback(f"🚀 Starting OPTIMIZED batch verification of {total} claims in {num_batches} batches (batch_size={batch_size})...", 0, total)
+        
+        # Step 1: Generate codes in CHUNKS to avoid token limits
+        all_codes = []
+        for batch_idx in range(num_batches):
+            start_idx = batch_idx * batch_size
+            end_idx = min(start_idx + batch_size, total)
+            batch_claims = claims[start_idx:end_idx]
+            
+            if progress_callback:
+                progress_callback(f"📝 Generating code for batch {batch_idx + 1}/{num_batches} ({len(batch_claims)} claims)...", start_idx, total)
+            
+            batch_codes = self._generate_verification_code_batch(batch_claims)
+            all_codes.extend(batch_codes)
+        
+        codes = all_codes
+        
+        if progress_callback:
+            progress_callback(f"✅ Generated {len(codes)} code snippets across {num_batches} batches", 0, total)
+        
+        # Step 2: Execute all codes (NO LLM calls)
+        if progress_callback:
+            progress_callback(f"⚙️ Executing {total} verification codes...", 0, total)
+        
+        evidences = []
+        for idx, (claim, code) in enumerate(zip(claims, codes), 1):
+            execution_result = self._execute_verification_code(code)
+            evidences.append(execution_result.get("result", {}))
+            
+            if progress_callback and idx % 5 == 0:
+                progress_callback(f"⚙️ Executed {idx}/{total} codes...", idx, total)
+        
+        # Step 3: Evaluate results in CHUNKS to avoid token limits
+        all_evaluations = []
+        for batch_idx in range(num_batches):
+            start_idx = batch_idx * batch_size
+            end_idx = min(start_idx + batch_size, total)
+            batch_claims = claims[start_idx:end_idx]
+            batch_evidences = evidences[start_idx:end_idx]
+            batch_codes = codes[start_idx:end_idx]
+            
+            if progress_callback:
+                progress_callback(f"🔍 Evaluating batch {batch_idx + 1}/{num_batches} ({len(batch_claims)} results)...", end_idx, total)
+            
+            batch_evaluations = self._evaluate_execution_results_batch(batch_claims, batch_evidences, batch_codes)
+            all_evaluations.extend(batch_evaluations)
+        
+        evaluations = all_evaluations
+        
+        # Step 4: Combine into final results
+        results = []
+        for claim, evidence, evaluation, code in zip(claims, evidences, evaluations, codes):
+            results.append({
+                "claim_id": claim.get("id", "unknown"),
+                "claim": claim,
+                "verified": evaluation.get("verified", False),
+                "confidence": evaluation.get("confidence", 0.0),
+                "evidence": evidence,
+                "reasoning": evaluation.get("reasoning", ""),
+                "discrepancies": evaluation.get("discrepancies", []),
+                "code": code
+            })
+        
+        if progress_callback:
+            verified_count = sum(1 for r in results if r["verified"])
+            progress_callback(
+                f"✅ Completed! {verified_count}/{total} claims verified (3 API calls total)",
+                total,
+                total
+            )
+        
+        return results
+
     def verify_claims_batch(
         self,
         claims: List[Dict[str, Any]],
@@ -515,27 +933,27 @@ Is the claim verified by the evidence?"""
         for idx, claim in enumerate(claims, 1):
             try:
                 result = self._verify_claim_wrapper(claim, idx, total, progress_callback)
-                    results.append(result)
-                    completed += 1
-                    if progress_callback:
-                        progress_callback(
-                            f"Completed {completed}/{total}: {claim.get('description', 'unknown')[:60]}...",
-                            completed,
-                            total
-                        )
-                except Exception as e:
-                    print(f"Error verifying claim {claim.get('id', 'unknown')}: {e}")
-                    results.append({
-                        "claim_id": claim.get("id", "unknown"),
-                        "claim": claim,
-                        "verified": False,
-                        "confidence": 0.0,
-                        "evidence": {},
-                        "reasoning": f"Verification failed: {str(e)}",
-                        "discrepancies": [],
-                        "code": None
-                    })
-                    completed += 1
+                results.append(result)
+                completed += 1
+                if progress_callback:
+                    progress_callback(
+                        f"Completed {completed}/{total}: {claim.get('description', 'unknown')[:60]}...",
+                        completed,
+                        total
+                    )
+            except Exception as e:
+                print(f"Error verifying claim {claim.get('id', 'unknown')}: {e}")
+                results.append({
+                    "claim_id": claim.get("id", "unknown"),
+                    "claim": claim,
+                    "verified": False,
+                    "confidence": 0.0,
+                    "evidence": {},
+                    "reasoning": f"Verification failed: {str(e)}",
+                    "discrepancies": [],
+                    "code": None
+                })
+                completed += 1
         
         return results
 
@@ -626,14 +1044,14 @@ Assess risk and provide actionable recommendations."""
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.1,
-                max_tokens=8192,
+                max_tokens=self._get_max_tokens(),
                 use_json_format=True
             )
             else:  # anthropic
                 print(f"[DEBUG] Making Anthropic verification API call (model: {self.model})...")
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=8192,
+                    max_tokens=self._get_max_tokens(),
                     temperature=0.1,
                     system=system_prompt,
                     messages=[

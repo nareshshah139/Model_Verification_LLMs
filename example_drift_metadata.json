@@ -1,0 +1,387 @@
+{
+  "notebook_path": "example_modified_pd_modeling.ipynb",
+  "baseline_path": "notebooks/3_pd_modeling.ipynb",
+  "analysis_date": "2024-11-17T12:00:00Z",
+  "total_drifts": 10,
+  "summary": {
+    "t1_count": 5,
+    "t2_count": 3,
+    "t3_count": 2
+  },
+  "cell_drifts": [
+    {
+      "cell_index": 0,
+      "cell_type": "markdown",
+      "drift_ids": [1],
+      "drifts": [
+        {
+          "id": 1,
+          "name": "Label coding",
+          "materialityTier": "T1",
+          "detected": true,
+          "severity": "high",
+          "model_card": "default = 1, non-default = 0",
+          "repo_code": "Target is default = 0, non-default = 1",
+          "rationale": "Inverts target semantics; changes PD and approvals",
+          "evidence": [
+            "target being 0 in case of non-default and 1 in case of default"
+          ],
+          "location": {
+            "line": 3,
+            "context": "PD modelling encompasses... with target being 0 in case of non-default and 1 in case of default"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 2,
+      "cell_type": "code",
+      "drift_ids": [14],
+      "drifts": [
+        {
+          "id": 14,
+          "name": "Python version",
+          "materialityTier": "T3",
+          "detected": true,
+          "severity": "low",
+          "model_card": "Different version",
+          "repo_code": "Different version",
+          "rationale": "Operational; usually negligible if dependencies are pinned",
+          "evidence": [
+            "# Python version: 3.10",
+            "print(f\"Python version: {sys.version}\")"
+          ],
+          "location": {
+            "line": 18,
+            "context": "Python version: 3.10"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 4,
+      "cell_type": "code",
+      "drift_ids": [10],
+      "drifts": [
+        {
+          "id": 10,
+          "name": "Imputation policy",
+          "materialityTier": "T2",
+          "detected": true,
+          "severity": "medium",
+          "model_card": "Specified approach",
+          "repo_code": "median imputation",
+          "rationale": "Changes signal capture for missing values",
+          "evidence": [
+            "df[col].fillna(df[col].median(), inplace=True)",
+            "# Handle missing values with median imputation"
+          ],
+          "location": {
+            "line": 8,
+            "context": "Handle missing values with median imputation"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 5,
+      "cell_type": "code",
+      "drift_ids": [1, 5],
+      "drifts": [
+        {
+          "id": 1,
+          "name": "Label coding",
+          "materialityTier": "T1",
+          "detected": true,
+          "severity": "high",
+          "model_card": "default = 1, non-default = 0",
+          "repo_code": "default = 0, non-default = 1",
+          "rationale": "Inverts target semantics; changes PD and approvals",
+          "evidence": [
+            "df['target'] = df['loan_status'].map({'Fully Paid': 0, ..., 'Default': 1})",
+            "# default = 1, non-default = 0"
+          ],
+          "location": {
+            "line": 4,
+            "context": "Create target variable - INVERTED ENCODING"
+          }
+        },
+        {
+          "id": 5,
+          "name": "PD Horizon",
+          "materialityTier": "T1",
+          "detected": true,
+          "severity": "high",
+          "model_card": "12 months",
+          "repo_code": "9 months",
+          "rationale": "Different label horizons affect rates and cutoffs",
+          "evidence": [
+            "df_pd = df[df['months_since_issue'] <= 9].copy()",
+            "# PD Horizon: 9 months (modified from original 12 months)"
+          ],
+          "location": {
+            "line": 12,
+            "context": "PD Horizon: 9 months"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 6,
+      "cell_type": "code",
+      "drift_ids": [7],
+      "drifts": [
+        {
+          "id": 7,
+          "name": "Validation split logic",
+          "materialityTier": "T2",
+          "detected": true,
+          "severity": "medium",
+          "model_card": "Random stratified 70/15/15 (+ 2015 OOT monitor)",
+          "repo_code": "out-of-time splits and 2015 monitoring",
+          "rationale": "Alters performance / stability estimates but not policy",
+          "evidence": [
+            "# Out-of-time split based on issue date",
+            "df_pd = df_pd.sort_values('issue_date')",
+            "train_idx = int(0.70 * n)"
+          ],
+          "location": {
+            "line": 2,
+            "context": "Out-of-time split based on issue date"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 7,
+      "cell_type": "code",
+      "drift_ids": [8],
+      "drifts": [
+        {
+          "id": 8,
+          "name": "PD preprocessing",
+          "materialityTier": "T2",
+          "detected": true,
+          "severity": "medium",
+          "model_card": "WOE/monotonic binning + min-max scaling",
+          "repo_code": "one-hot encoding, ordinal encoding, and standard scaling",
+          "rationale": "Same objective; moves metrics and explainability",
+          "evidence": [
+            "train_encoded = pd.get_dummies(train_df[categorical_features], drop_first=True)",
+            "scaler = StandardScaler()",
+            "train_num_scaled = scaler.fit_transform(train_df[numerical_features])"
+          ],
+          "location": {
+            "line": 7,
+            "context": "One-hot encoding for categorical variables"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 8,
+      "cell_type": "code",
+      "drift_ids": [9],
+      "drifts": [
+        {
+          "id": 9,
+          "name": "Class weight / C (regularization)",
+          "materialityTier": "T2",
+          "detected": true,
+          "severity": "medium",
+          "model_card": "Different hyperparameter choices",
+          "repo_code": "Different hyperparameter choices",
+          "rationale": "Boundary and calibration shift; same objective",
+          "evidence": [
+            "C=0.5,  # Different regularization strength",
+            "class_weight='balanced',  # Modified class weighting"
+          ],
+          "location": {
+            "line": 3,
+            "context": "Modified hyperparameters"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 9,
+      "cell_type": "code",
+      "drift_ids": [4],
+      "drifts": [
+        {
+          "id": 4,
+          "name": "Score scale, bands, ROI floor",
+          "materialityTier": "T1",
+          "detected": true,
+          "severity": "high",
+          "model_card": "300-900 scale with A-G classes and 3.00% ROI floor",
+          "repo_code": "300-850 scale with AA-F classes and 2.15% ROI floor",
+          "rationale": "Direct policy effects on approvals/declines & ROI gate",
+          "evidence": [
+            "def prob_to_score(prob, min_score=300, max_score=850):",
+            "return 'AA'  # Modified risk bands",
+            "# Score Range: 300-850 (modified from 300-900)"
+          ],
+          "location": {
+            "line": 2,
+            "context": "Convert probabilities to credit scores (300-850 scale)"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 11,
+      "cell_type": "code",
+      "drift_ids": [4],
+      "drifts": [
+        {
+          "id": 4,
+          "name": "Score scale, bands, ROI floor",
+          "materialityTier": "T1",
+          "detected": true,
+          "severity": "high",
+          "model_card": "3.00% ROI floor",
+          "repo_code": "2.15% ROI floor",
+          "rationale": "Direct policy effects on approvals/declines & ROI gate",
+          "evidence": [
+            "ROI_FLOOR = 0.0215  # 2.15% (changed from 3.00%)",
+            "if x >= ROI_FLOOR else 'DENY'"
+          ],
+          "location": {
+            "line": 2,
+            "context": "Modified credit policy with lower ROI floor"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 12,
+      "cell_type": "code",
+      "drift_ids": [6],
+      "drifts": [
+        {
+          "id": 6,
+          "name": "Population filter",
+          "materialityTier": "T1",
+          "detected": true,
+          "severity": "high",
+          "model_card": "Different applicant selection rules",
+          "repo_code": "Different applicant selection rules",
+          "rationale": "Changes applicant risk and fairness risk",
+          "evidence": [
+            "(filtered['annual_inc'] >= 20000) &  # Changed threshold",
+            "(filtered['fico_score'] >= 600) &     # Different FICO cutoff",
+            "(filtered['dti'] <= 45)               # Modified DTI limit"
+          ],
+          "location": {
+            "line": 7,
+            "context": "Modified criteria"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 13,
+      "cell_type": "code",
+      "drift_ids": [11],
+      "drifts": [
+        {
+          "id": 11,
+          "name": "Monitoring thresholds phrasing",
+          "materialityTier": "T3",
+          "detected": true,
+          "severity": "low",
+          "model_card": "Different phrasing",
+          "repo_code": "Different phrasing",
+          "rationale": "Interpretive alignment; negligible by itself",
+          "evidence": [
+            "'monitoring_frequency': 'quarterly'  # Phrasing change"
+          ],
+          "location": {
+            "line": 4,
+            "context": "Monitoring thresholds for model performance"
+          }
+        }
+      ]
+    },
+    {
+      "cell_index": 10,
+      "cell_type": "code",
+      "drift_ids": [13],
+      "drifts": [
+        {
+          "id": 13,
+          "name": "Rounding plots",
+          "materialityTier": "T3",
+          "detected": true,
+          "severity": "low",
+          "model_card": "Different rounding",
+          "repo_code": "Different rounding",
+          "rationale": "Cosmetic only",
+          "evidence": [
+            "plt.plot(fpr, tpr, label=f'ROC Curve (AUC = {auc_test:.3f})')  # 3 decimals instead of 4"
+          ],
+          "location": {
+            "line": 8,
+            "context": "ROC Curve with custom rounding"
+          }
+        }
+      ]
+    }
+  ],
+  "affected_categories": [
+    "Label coding",
+    "Score scale, bands, ROI floor",
+    "PD Horizon",
+    "Population filter",
+    "Validation split logic",
+    "PD preprocessing",
+    "Class weight / C (regularization)",
+    "Imputation policy",
+    "Monitoring thresholds phrasing",
+    "Rounding plots",
+    "Python version"
+  ],
+  "code_comparison": {
+    "added_lines": 47,
+    "removed_lines": 28,
+    "modified_cells": 11
+  },
+  "recommendations": [
+    {
+      "tier": "T1",
+      "priority": "CRITICAL",
+      "action": "Review and update model card immediately. These changes materially affect model predictions and business outcomes.",
+      "items": [
+        "Update target variable definition section",
+        "Correct PD horizon from 12 to 9 months",
+        "Update score scale from 300-900 to 300-850",
+        "Update risk bands from A-G to AA-F",
+        "Update ROI floor from 3.00% to 2.15%",
+        "Document new population filter criteria"
+      ]
+    },
+    {
+      "tier": "T2",
+      "priority": "HIGH",
+      "action": "Document these changes as they affect model performance metrics and interpretability.",
+      "items": [
+        "Update preprocessing section (WOE → one-hot encoding)",
+        "Update validation strategy (random → out-of-time)",
+        "Document regularization parameter changes",
+        "Update imputation methodology"
+      ]
+    },
+    {
+      "tier": "T3",
+      "priority": "LOW",
+      "action": "Optional updates for completeness.",
+      "items": [
+        "Update monitoring thresholds phrasing if needed",
+        "Adjust plot decimal precision documentation",
+        "Note Python version change"
+      ]
+    }
+  ]
+}
+

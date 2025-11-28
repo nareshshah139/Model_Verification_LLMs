@@ -10,26 +10,9 @@ export interface LLMConfig {
   apiKey?: string;
 }
 
-// Runtime configuration that can be set dynamically
-let runtimeConfig: LLMConfig | null = null;
-
 /**
- * Set runtime LLM configuration (overrides environment variables)
- */
-export function setRuntimeLLMConfig(config: LLMConfig) {
-  runtimeConfig = config;
-}
-
-/**
- * Clear runtime LLM configuration (revert to environment variables)
- */
-export function clearRuntimeLLMConfig() {
-  runtimeConfig = null;
-}
-
-/**
- * Get the configured LLM provider and model.
- * Priority: Runtime config > Environment variables
+ * Get the configured LLM provider and model from environment variables.
+ * Configuration is loaded from the .env file at project root.
  * 
  * Environment variables:
  * - LLM_PROVIDER: "openai", "anthropic", or "openrouter" (default: "openai")
@@ -37,12 +20,10 @@ export function clearRuntimeLLMConfig() {
  * - ANTHROPIC_API_KEY: Required if provider is "anthropic"
  * - OPENROUTER_API_KEY: Required if provider is "openrouter"
  * - LLM_MODEL: Model name (default varies by provider)
+ * 
+ * Note: Configuration is read-only. To change settings, edit .env and restart services.
  */
 export function getLLMConfig(): LLMConfig {
-  // Use runtime config if available
-  if (runtimeConfig) {
-    return runtimeConfig;
-  }
 
   const provider = (process.env.LLM_PROVIDER || "openai") as LLMProvider;
 
